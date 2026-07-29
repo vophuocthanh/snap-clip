@@ -1,0 +1,23 @@
+
+echo "🔍 Running pre-commit checks..."
+
+# Kiểm tra không có file lớn (>1MB) bị commit
+LARGE_FILES=$(git diff --cached --name-only | xargs -I{} find {} -size +1M 2>/dev/null)
+if [ -n "$LARGE_FILES" ]; then
+  echo "⚠️  Warning: Large files detected:"
+  echo "$LARGE_FILES"
+fi
+
+# Kiểm tra không có merge conflict markers
+if git diff --cached | grep -E '^(<<<<<<<|>>>>>>>|=======)' > /dev/null 2>&1; then
+  echo "❌ Merge conflict markers found! Please resolve them before committing."
+  exit 1
+fi
+
+# Kiểm tra không có file .DS_Store
+if git diff --cached --name-only | grep -q '\.DS_Store$'; then
+  echo "❌ .DS_Store files detected! They should not be committed."
+  exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"

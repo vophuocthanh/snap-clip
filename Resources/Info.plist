@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>CopyClipPro</string>
+    <key>CFBundleDisplayName</key>
+    <string>CopyClipPro</string>
+    <key>CFBundleIdentifier</key>
+    <string>vn.dipro.copyclippro</string>
+    <key>CFBundleExecutable</key>
+    <string>CopyClipPro</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <!-- Hiện icon ở Dock (regular app). Đổi thành <true/> để quay lại menu-bar-only. -->
+    <key>LSUIElement</key>
+    <false/>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Dipro</string>
+    <!-- Giải thích quyền khi tự động dán (synthesize Cmd+V) -->
+    <key>NSAppleEventsUsageDescription</key>
+    <string>CopyClipPro cần quyền để tự động dán nội dung đã chọn vào ứng dụng đang mở.</string>
+</dict>
+</plist>
