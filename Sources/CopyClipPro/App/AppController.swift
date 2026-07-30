@@ -20,6 +20,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private var panel: FloatingPanel!
     private var settingsWindow: NSWindow?
+    private var detailWindow: NSWindow?
     private var keyMonitor: Any?
     /// Used to prevent accidental reopening of panel when clicking the status button.
     private var panelDismissedAt: Date?
@@ -131,7 +132,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             viewModel: historyVM,
             onSelect: { [weak self] item in self?.handleSelect(item) },
             onClose: { [weak self] in self?.closePopover() },
-            onOpenSettings: { [weak self] in self?.openSettings() }
+            onOpenSettings: { [weak self] in self?.openSettings() },
+            onShowDetail: { [weak self] item in self?.showDetail(item) }
         )
         let hosting = NSHostingView(rootView: root)
         hosting.wantsLayer = true
@@ -219,6 +221,51 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    // MARK: - Detail View
+
+    private func showDetail(_ item: ClipboardItem) {
+        closePopover()
+        if let win = detailWindow {
+            win.close()
+            detailWindow = nil
+        }
+
+        let view = DetailView(
+            item: item,
+            onLoadFullContent: { [weak self] item in
+                await self?.historyVM.loadFullContent(for: item) ?? item
+            },
+            onCopy: { [weak self] item in
+                var resolved = item
+                if item.type == .image, item.imageData == nil {
+                    resolved.imageData = try? self?.repository.imageData(id: item.id)
+                }
+                if item.type == .richText, item.richTextData == nil {
+                    resolved.richTextData = try? self?.repository.richTextData(id: item.id)
+                }
+                self?.pasteService.copyToPasteboard(resolved)
+            },
+            onClose: { [weak self] in
+                self?.detailWindow?.close()
+                self?.detailWindow = nil
+            }
+        )
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 520),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Chi tiết"
+        window.contentViewController = NSHostingController(rootView: view)
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        detailWindow = window
+    }
+
     // MARK: - Keyboard navigation trong popover
 
     private func installKeyMonitor() {
@@ -240,6 +287,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             case kVK_Escape:
                 self.closePopover()
                 return nil
+            case kVK_ANSI_I:
+                // Cmd+I: mở chi tiết mục đang chọn
+                if event.modifierFlags.contains(.command),
+                   let item = self.historyVM.selectedItem {
+                    self.showDetail(item)
+                    return nil
+                }
+                return event
             default:
                 // Cmd+Delete: xoá mục đang chọn.
                 if event.modifierFlags.contains(.command),

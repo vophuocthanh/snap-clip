@@ -24,6 +24,12 @@ protocol ClipboardRepository: Sendable {
     /// Tải dữ liệu ảnh gốc (PNG) của một item — dùng khi cần paste/preview.
     func imageData(id: UUID) throws -> Data?
 
+    /// Tải dữ liệu RTF gốc của một item.
+    func richTextData(id: UUID) throws -> Data?
+
+    /// Giải bookmark của một file item để lấy URL gốc (dùng khi paste/preview).
+    func resolveFileURL(id: UUID) throws -> URL?
+
     /// Cập nhật cờ pin/favorite của một item.
     func setPinned(_ isPinned: Bool, id: UUID) throws
     func setFavorite(_ isFavorite: Bool, id: UUID) throws

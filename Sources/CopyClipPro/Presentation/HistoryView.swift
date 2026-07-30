@@ -10,6 +10,8 @@ struct HistoryView: View {
     var onClose: () -> Void
     /// Mở cửa sổ Settings.
     var onOpenSettings: () -> Void
+    /// Mở detail view toàn màn hình.
+    var onShowDetail: (ClipboardItem) -> Void
 
     @FocusState private var searchFocused: Bool
 
@@ -85,9 +87,11 @@ struct HistoryView: View {
                 ScrollView {
                     LazyVStack(spacing: 2) {
                         ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
+                            HStack(spacing: 2) {
+                            let isSelected = index == viewModel.selectedIndex
                             HistoryRow(
                                 item: item,
-                                isSelected: index == viewModel.selectedIndex
+                                isSelected: isSelected
                             )
                             // Định danh theo item.id (KHÔNG theo index) để SwiftUI cập nhật
                             // đúng nội dung/ảnh khi danh sách thay đổi — tránh kẹt ảnh cũ.
@@ -97,8 +101,21 @@ struct HistoryView: View {
                                 viewModel.selectedIndex = index
                                 onSelect(item)
                             }
-                            .contextMenu { rowMenu(for: item) }
+
+                            // Nút chi tiết
+                            Button {
+                                onShowDetail(item)
+                            } label: {
+                                Image(systemName: "info.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(isSelected ? Color.white : Color.secondary.opacity(0.4))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Xem chi tiết")
+                            .padding(.trailing, 6)
                         }
+                        .contextMenu { rowMenu(for: item) }
+                    }
                     }
                     .padding(.vertical, 4)
                     .padding(.horizontal, 6)
@@ -132,6 +149,8 @@ struct HistoryView: View {
     @ViewBuilder
     private func rowMenu(for item: ClipboardItem) -> some View {
         Button("Dán") { onSelect(item) }
+        Button("Xem chi tiết") { onShowDetail(item) }
+        Divider()
         Button(item.isPinned ? "Bỏ ghim" : "Ghim") { viewModel.togglePin(item) }
         Button(item.isFavorite ? "Bỏ yêu thích" : "Yêu thích") { viewModel.toggleFavorite(item) }
         Divider()

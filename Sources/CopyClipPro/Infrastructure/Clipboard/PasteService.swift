@@ -17,13 +17,38 @@ final class PasteService {
     /// Với item ảnh, `imageData` cần được nạp trước (từ repository).
     func copyToPasteboard(_ item: ClipboardItem) {
         pasteboard.clearContents()
-        if item.type == .image, let data = item.imageData {
-            pasteboard.setData(data, forType: .png)
-        } else {
+        switch item.type {
+        case .image:
+            if let data = item.imageData {
+                pasteboard.setData(data, forType: .png)
+            } else {
+                pasteboard.setString(item.content, forType: .string)
+            }
+        case .richText:
+            if let data = item.richTextData {
+                pasteboard.setData(data, forType: .rtf)
+            } else {
+                pasteboard.setString(item.content, forType: .string)
+            }
+        case .file:
+            if let bookmark = item.fileBookmark {
+                var stale = false
+                if let url = try? URL(
+                    resolvingBookmarkData: bookmark,
+                    options: .withSecurityScope,
+                    relativeTo: nil,
+                    bookmarkDataIsStale: &stale
+                ) {
+                    pasteboard.writeObjects([url as NSURL])
+                } else if let path = item.filePath {
+                    pasteboard.writeObjects([URL(fileURLWithPath: path) as NSURL])
+                }
+            } else if let path = item.filePath {
+                pasteboard.writeObjects([URL(fileURLWithPath: path) as NSURL])
+            }
+        default:
             pasteboard.setString(item.content, forType: .string)
         }
-        // Gọi SAU khi ghi để monitor ghi nhận đúng changeCount vừa tạo ra → không tự
-        // re-capture lại chính nội dung app vừa paste (tránh nhân bản clipboard).
         willWriteToPasteboard?()
     }
 

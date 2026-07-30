@@ -6,7 +6,7 @@ import Foundation
 /// tăng dần trong tương lai mà không phá dữ liệu người dùng.
 final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable {
     private let db: SQLiteDatabase
-    private static let currentSchemaVersion = 2
+    private static let currentSchemaVersion = 3
 
     init(db: SQLiteDatabase) throws {
         self.db = db
@@ -62,6 +62,14 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             try db.exec("ALTER TABLE clipboard_items ADD COLUMN thumbnail_data BLOB;")
             try db.exec("PRAGMA user_version = 2;")
         }
+        if version < 3 {
+            // Sprint 4: rich text RTF, file bookmark/path/UTI.
+            try db.exec("ALTER TABLE clipboard_items ADD COLUMN rich_text_data BLOB;")
+            try db.exec("ALTER TABLE clipboard_items ADD COLUMN file_bookmark BLOB;")
+            try db.exec("ALTER TABLE clipboard_items ADD COLUMN file_path TEXT;")
+            try db.exec("ALTER TABLE clipboard_items ADD COLUMN file_uti TEXT;")
+            try db.exec("PRAGMA user_version = 3;")
+        }
     }
 
     private func currentUserVersion() throws -> Int {
@@ -95,8 +103,9 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             INSERT INTO clipboard_items
                 (id, content, content_hash, type, created_at,
                  is_pinned, is_favorite, source_bundle_id, source_app_name,
-                 image_data, thumbnail_data)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                 image_data, thumbnail_data, rich_text_data,
+                 file_bookmark, file_path, file_uti)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
             bind: { stmt in
                 stmt.bindText(item.id.uuidString, at: 1)
@@ -110,6 +119,10 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
                 stmt.bindTextOrNull(item.sourceAppName, at: 9)
                 stmt.bindBlobOrNull(item.imageData, at: 10)
                 stmt.bindBlobOrNull(item.thumbnailData, at: 11)
+                stmt.bindBlobOrNull(item.richTextData, at: 12)
+                stmt.bindBlobOrNull(item.fileBookmark, at: 13)
+                stmt.bindTextOrNull(item.filePath, at: 14)
+                stmt.bindTextOrNull(item.fileUTI, at: 15)
             }
         )
         return item
@@ -124,8 +137,41 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
         return rows.first ?? nil
     }
 
+    func richTextData(id: UUID) throws -> Data? {
+        let rows = try db.run(
+            "SELECT rich_text_data FROM clipboard_items WHERE id = ? LIMIT 1;",
+            bind: { $0.bindText(id.uuidString, at: 1) },
+            read: { $0.columnBlobOrNil(0) }
+        )
+        return rows.first ?? nil
+    }
+
+    func resolveFileURL(id: UUID) throws -> URL? {
+        let rows = try db.run(
+            "SELECT file_bookmark, file_path FROM clipboard_items WHERE id = ? LIMIT 1;",
+            bind: { $0.bindText(id.uuidString, at: 1) },
+            read: { (stmt) -> (Data?, String?) in
+                (stmt.columnBlobOrNil(0), stmt.columnTextOrNil(1))
+            }
+        )
+        guard let (bookmarkData, path) = rows.first else { return nil }
+        // Thử giải bookmark trước; fallback dùng đường dẫn
+        if let bookmarkData {
+            var stale = false
+            if let url = try? URL(
+                resolvingBookmarkData: bookmarkData,
+                options: .withSecurityScope,
+                relativeTo: nil,
+                bookmarkDataIsStale: &stale
+            ) {
+                return url
+            }
+        }
+        return path.flatMap { URL(fileURLWithPath: $0) }
+    }
+
     func fetch(_ query: HistoryQuery) throws -> [ClipboardItem] {
-        var sql = "SELECT id, content, content_hash, type, created_at, is_pinned, is_favorite, source_bundle_id, source_app_name, thumbnail_data FROM clipboard_items"
+        var sql = "SELECT id, content, content_hash, type, created_at, is_pinned, is_favorite, source_bundle_id, source_app_name, thumbnail_data, file_path, file_uti FROM clipboard_items"
         var conditions: [String] = []
         if !query.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
             conditions.append("content LIKE ? ESCAPE '\\'")
@@ -229,7 +275,9 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             sourceAppBundleId: stmt.columnTextOrNil(7),
             sourceAppName: stmt.columnTextOrNil(8),
             imageData: nil,
-            thumbnailData: stmt.columnBlobOrNil(9)
+            thumbnailData: stmt.columnBlobOrNil(9),
+            filePath: stmt.columnTextOrNil(10),
+            fileUTI: stmt.columnTextOrNil(11)
         )
     }
 }

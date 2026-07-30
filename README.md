@@ -21,7 +21,41 @@ Trình quản lý lịch sử clipboard (Clipboard History) **native cho macOS**
 - macOS 14+ (Sonoma trở lên)
 - Xcode 16+ / Swift 6.0+ (đã kiểm thử với Swift 6.2, Xcode 26)
 
-## Build & chạy
+## Quick Start
+
+### 🏃 Chạy nhanh (phát triển)
+
+```bash
+swift run
+```
+
+App sẽ chạy và hiển thị icon 📋 trên menu bar. Bấm icon hoặc hotkey **⌘⌥V** để mở.
+
+### 📦 Build release + mở app
+
+```bash
+swift build --configuration release
+open .build/release/CopyClipPro
+```
+
+### 🛠 Mở bằng Xcode
+
+```bash
+open Package.swift
+```
+
+Chọn scheme `CopyClipPro` → nhấn **⌘R**.
+
+### 📱 Đóng gói `.app` hoàn chỉnh (khuyến nghị)
+
+```bash
+./scripts/package.sh release
+open dist/CopyClipPro.app
+```
+
+> ⚠️ Menu bar app cần bundle `Info.plist` (khoá `LSUIElement`) để hoạt động đúng — ưu tiên chạy qua `.app` hoặc `swift run`.
+
+## Build & chạy (chi tiết)
 
 ### Cách 1 — Đóng gói `.app` rồi mở (khuyến nghị)
 
@@ -82,9 +116,11 @@ Sau khi mở, tìm icon 📋 trên thanh menu. Bấm để mở, hoặc nhấn *
 ```
 
 Copy `dist/CopyClipPro.dmg` sang máy Mac khác → kéo vào `/Applications`. Lần đầu gỡ chặn Gatekeeper:
+
 ```bash
 xattr -cr "/Applications/CopyClipPro.app"
 ```
+
 Chi tiết ký/notarize để phát hành sạch: xem [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Kiến trúc

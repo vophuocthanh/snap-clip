@@ -81,4 +81,25 @@ final class HistoryViewModel: ObservableObject {
         guard !items.isEmpty else { return }
         selectedIndex = min(max(0, selectedIndex + delta), items.count - 1)
     }
+
+    // MARK: - Detail View
+
+    /// Tải dữ liệu đầy đủ cho detail view (ảnh gốc, RTF, file). Chạy trên background.
+    func loadFullContent(for item: ClipboardItem) async -> ClipboardItem {
+        var loaded = item
+        switch item.type {
+        case .image:
+            loaded.imageData = try? repository.imageData(id: item.id)
+        case .richText:
+            loaded.richTextData = try? repository.richTextData(id: item.id)
+        case .file:
+            if let url = try? repository.resolveFileURL(id: item.id) {
+                loaded.filePath = url.path
+                loaded.fileBookmark = FileUtils.createBookmark(for: url)
+            }
+        default:
+            break
+        }
+        return loaded
+    }
 }

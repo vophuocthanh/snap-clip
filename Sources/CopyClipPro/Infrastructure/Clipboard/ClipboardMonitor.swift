@@ -82,12 +82,25 @@ final class ClipboardMonitor {
     }
 
     private func readCurrentItem(sourceApp: NSRunningApplication?) -> ClipboardItem? {
-        // Ưu tiên ảnh: chỉ nhận khi pasteboard thực sự có dữ liệu ảnh (png/tiff),
-        // tránh nhầm file URL thành ảnh.
+        // 1) Ảnh (dữ liệu ảnh trực tiếp)
         if let imageItem = readImageItem(sourceApp: sourceApp) {
             return imageItem
         }
-
+        // 2) Rich text (RTF/RTFD)
+        if let rt = RichTextUtils.readRTF(from: pasteboard) {
+            return ClipboardItem(
+                content: rt.plainText,
+                type: .richText,
+                sourceAppBundleId: sourceApp?.bundleIdentifier,
+                sourceAppName: sourceApp?.localizedName,
+                richTextData: rt.rtfData
+            )
+        }
+        // 3) File (URL bookmark)
+        if let fileItem = readFileItem(sourceApp: sourceApp) {
+            return fileItem
+        }
+        // 4) Text / URL / Color
         guard let string = pasteboard.string(forType: .string) else { return nil }
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -113,6 +126,30 @@ final class ClipboardMonitor {
             sourceAppName: sourceApp?.localizedName,
             imageData: png,
             thumbnailData: thumb
+        )
+    }
+
+    /// Đọc file từ pasteboard (chỉ non-image files — ảnh đã được xử lý ở readImageItem).
+    private func readFileItem(sourceApp: NSRunningApplication?) -> ClipboardItem? {
+        guard FileUtils.hasFiles(in: pasteboard) else { return nil }
+        let files = FileUtils.readFileURLs(from: pasteboard)
+        // Lọc bỏ file ảnh (đã xử lý ở readImageItem)
+        let nonImageFiles = files.filter { !FileUtils.isImageUTI($0.uti) }
+        guard let first = nonImageFiles.first else { return nil }
+
+        let url = URL(fileURLWithPath: first.path)
+        let bookmark = FileUtils.createBookmark(for: url)
+        let size = FileUtils.formattedFileSize(at: first.path)
+        let name = url.lastPathComponent
+
+        return ClipboardItem(
+            content: name + (size.isEmpty ? "" : " (\(size))"),
+            type: .file,
+            sourceAppBundleId: sourceApp?.bundleIdentifier,
+            sourceAppName: sourceApp?.localizedName,
+            fileBookmark: bookmark,
+            filePath: first.path,
+            fileUTI: first.uti
         )
     }
 
@@ -153,7 +190,7 @@ final class ClipboardMonitor {
            !trimmed.contains(" ") {
             return .url
         }
-        if isHexColor(trimmed) {
+        if isHexColor(trimmed) || isCSSColor(trimmed) {
             return .color
         }
         return .text
@@ -164,5 +201,21 @@ final class ClipboardMonitor {
         let hex = s.dropFirst()
         guard hex.count == 6 || hex.count == 3 || hex.count == 8 else { return false }
         return hex.allSatisfy { $0.isHexDigit }
+    }
+
+    /// Phát hiện các định dạng màu CSS: rgb(r,g,b), rgba(r,g,b,a), tên màu cơ bản.
+    private static func isCSSColor(_ s: String) -> Bool {
+        let lower = s.lowercased()
+        // rgb() / rgba()
+        if lower.hasPrefix("rgb") {
+            let noSpace = lower.filter { !$0.isWhitespace }
+            return noSpace.range(of: #"^rgba?\(\d{1,3}(,\d{1,3}){2}(,\d+(\.\d+)?)?\)$"#, options: .regularExpression) != nil
+        }
+        // Tên màu cơ bản
+        let colorNames: Set<String> = [
+            "red", "green", "blue", "yellow", "orange", "purple", "pink",
+            "brown", "black", "white", "gray", "cyan", "magenta"
+        ]
+        return colorNames.contains(lower)
     }
 }
