@@ -51,7 +51,7 @@ final class GlobalHotkey {
         guard installStatus == noErr else { return nil }
 
         let hotKeyID = EventHotKeyID(
-            signature: OSType(0x43_43_50_52), // 'CCPR'
+            signature: OSType(0x53_4E_43_4C), // 'SNCL'
             id: 1
         )
         let registerStatus = RegisterEventHotKey(

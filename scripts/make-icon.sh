@@ -7,8 +7,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-SRC=/tmp/CopyClipPro-icon.png
-ISET=/tmp/CopyClipPro.iconset
+SRC=/tmp/SnapClip-icon.png
+ISET=/tmp/SnapClip.iconset
 
 echo "▶︎ Vẽ PNG gốc"
 swift scripts/make-icon.swift

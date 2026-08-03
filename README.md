@@ -1,4 +1,4 @@
-# CopyClipPro
+# SnapClip
 
 Trình quản lý lịch sử clipboard (Clipboard History) **native cho macOS**, viết bằng **Swift + SwiftUI + AppKit**, lưu trữ bằng **SQLite**. Zero-dependency — chỉ dùng API chính thức của Apple.
 
@@ -35,7 +35,7 @@ App sẽ chạy và hiển thị icon 📋 trên menu bar. Bấm icon hoặc hot
 
 ```bash
 swift build --configuration release
-open .build/release/CopyClipPro
+open .build/release/SnapClip
 ```
 
 ### 🛠 Mở bằng Xcode
@@ -44,13 +44,13 @@ open .build/release/CopyClipPro
 open Package.swift
 ```
 
-Chọn scheme `CopyClipPro` → nhấn **⌘R**.
+Chọn scheme `SnapClip` → nhấn **⌘R**.
 
 ### 📱 Đóng gói `.app` hoàn chỉnh (khuyến nghị)
 
 ```bash
 ./scripts/package.sh release
-open dist/CopyClipPro.app
+open dist/SnapClip.app
 ```
 
 > ⚠️ Menu bar app cần bundle `Info.plist` (khoá `LSUIElement`) để hoạt động đúng — ưu tiên chạy qua `.app` hoặc `swift run`.
@@ -62,24 +62,24 @@ open dist/CopyClipPro.app
 Đây là cách chạy đúng như một menu bar app thật (có icon trên thanh menu, ẩn khỏi Dock).
 
 ```bash
-# Build bản release + đóng gói thành dist/CopyClipPro.app
+# Build bản release + đóng gói thành dist/SnapClip.app
 ./scripts/package.sh release
 
 # Mở app (icon 📋 sẽ xuất hiện trên thanh menu)
-open dist/CopyClipPro.app
+open dist/SnapClip.app
 ```
 
 > ⚠️ **Phải chạy qua `.app`**, không chạy binary trần. Menu bar app cần `Info.plist`
 > (khoá `LSUIElement`) trong bundle thì status item mới hoạt động đúng.
 
 Script [scripts/package.sh](scripts/package.sh) sẽ tự: `swift build -c release` → tạo
-`dist/CopyClipPro.app` với `Info.plist` → ký ad-hoc để chạy cục bộ. Truyền `debug`
+`dist/SnapClip.app` với `Info.plist` → ký ad-hoc để chạy cục bộ. Truyền `debug`
 thay cho `release` để đóng gói bản debug: `./scripts/package.sh debug`.
 
 ### Cách 2 — Build thủ công bằng SwiftPM
 
 ```bash
-swift build -c release                 # biên dịch, ra .build/release/CopyClipPro
+swift build -c release                 # biên dịch, ra .build/release/SnapClip
 swift build                            # bản debug (mặc định)
 swift run                              # build + chạy nhanh khi phát triển
 ```
@@ -90,9 +90,9 @@ với menu bar app nên ưu tiên **Cách 1** để trải nghiệm đầy đủ
 ### Build lại & cài đè (workflow thường dùng)
 
 ```bash
-pkill -x CopyClipPro                    # tắt bản đang chạy (nếu có)
+pkill -x SnapClip                    # tắt bản đang chạy (nếu có)
 ./scripts/package.sh release            # build + đóng gói lại
-open dist/CopyClipPro.app               # mở bản mới
+open dist/SnapClip.app               # mở bản mới
 ```
 
 ### Mở bằng Xcode (tuỳ chọn)
@@ -115,10 +115,10 @@ Sau khi mở, tìm icon 📋 trên thanh menu. Bấm để mở, hoặc nhấn *
 ./scripts/make-dist.sh     # tạo universal .app + .zip + .dmg trong dist/
 ```
 
-Copy `dist/CopyClipPro.dmg` sang máy Mac khác → kéo vào `/Applications`. Lần đầu gỡ chặn Gatekeeper:
+Copy `dist/SnapClip.dmg` sang máy Mac khác → kéo vào `/Applications`. Lần đầu gỡ chặn Gatekeeper:
 
 ```bash
-xattr -cr "/Applications/CopyClipPro.app"
+xattr -cr "/Applications/SnapClip.app"
 ```
 
 Chi tiết ký/notarize để phát hành sạch: xem [docs/RELEASE.md](docs/RELEASE.md).
@@ -140,7 +140,7 @@ Nguyên tắc: **phụ thuộc luôn hướng vào trong**. UI và ViewModel ch�
 ## Cấu trúc thư mục
 
 ```
-Sources/CopyClipPro/
+Sources/SnapClip/
 ├── App/                  # main.swift, AppController (wiring, status item, popover)
 ├── Presentation/         # HistoryView, HistoryRow, SettingsView
 ├── Application/          # HistoryViewModel, AppSettings

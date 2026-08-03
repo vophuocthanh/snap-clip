@@ -21,7 +21,7 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        ).appendingPathComponent("CopyClipPro", isDirectory: true)
+        ).appendingPathComponent("SnapClip", isDirectory: true)
         try fm.createDirectory(at: base, withIntermediateDirectories: true)
         let dbURL = base.appendingPathComponent("history.sqlite")
         let db = try SQLiteDatabase(path: dbURL.path)

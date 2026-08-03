@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
-# CopyClipPro Commit Message Hook - Sử dụng commitlint
+# SnapClip Commit Message Hook - Sử dụng commitlint
 
 pnpm exec commitlint --edit $1

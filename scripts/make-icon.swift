@@ -1,7 +1,7 @@
 import AppKit
 
-// Vẽ app icon CopyClipPro (clipboard + hint lịch sử) ra PNG 1024×1024.
-// Chạy: swift scripts/make-icon.swift  → xuất /tmp/CopyClipPro-icon.png
+// Vẽ app icon SnapClip (clipboard + hint lịch sử) ra PNG 1024×1024.
+// Chạy: swift scripts/make-icon.swift  → xuất /tmp/SnapClip-icon.png
 
 let S: CGFloat = 1024
 let image = NSImage(size: NSSize(width: S, height: S))
@@ -89,6 +89,6 @@ guard let tiff = image.tiffRepresentation,
     FileHandle.standardError.write("Lỗi tạo PNG\n".data(using: .utf8)!)
     exit(1)
 }
-let out = "/tmp/CopyClipPro-icon.png"
+let out = "/tmp/SnapClip-icon.png"
 try? png.write(to: URL(fileURLWithPath: out))
 print("✓ \(out)")

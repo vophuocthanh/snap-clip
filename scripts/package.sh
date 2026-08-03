@@ -6,7 +6,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="CopyClipPro"
+APP_NAME="SnapClip"
 CONFIG="${1:-release}"          # release | debug
 BUILD_DIR="$ROOT/.build/$CONFIG"
 APP_DIR="$ROOT/dist/$APP_NAME.app"

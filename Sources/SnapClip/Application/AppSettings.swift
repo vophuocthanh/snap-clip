@@ -6,7 +6,7 @@ import os
 @MainActor
 final class AppSettings: ObservableObject {
     private let defaults: UserDefaults
-    private let log = Logger(subsystem: "com.copyclippro", category: "settings")
+    private let log = Logger(subsystem: "com.snapclip", category: "settings")
 
     @Published var maxHistoryItems: Int {
         didSet { defaults.set(maxHistoryItems, forKey: Keys.maxHistoryItems) }
@@ -55,7 +55,7 @@ final class AppSettings: ObservableObject {
     // MARK: - Encryption
 
     /// Key mã hoá lưu trong Keychain (không bao giờ ghi xuống UserDefaults).
-    private static let keyTag = "com.copyclippro.encryptionKey"
+    private static let keyTag = "com.snapclip.encryptionKey"
 
     /// Lấy hoặc tạo key AES-GCM 256-bit lưu trong Keychain.
     func encryptionKey() -> SymmetricKey? {
@@ -91,11 +91,11 @@ final class AppSettings: ObservableObject {
         ]
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         if addStatus != errSecSuccess {
-            Logger(subsystem: "com.copyclippro", category: "settings")
+            Logger(subsystem: "com.snapclip", category: "settings")
                 .error("Failed to store encryption key: \(addStatus)")
             return nil
         }
-        Logger(subsystem: "com.copyclippro", category: "settings")
+        Logger(subsystem: "com.snapclip", category: "settings")
             .info("Created new encryption key")
         return key
     }

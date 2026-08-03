@@ -27,7 +27,7 @@ enum SQLiteError: Error, CustomStringConvertible {
 /// đủ nhanh cho khối lượng của một clipboard manager (ghi rời rạc, đọc nhẹ).
 final class SQLiteDatabase: @unchecked Sendable {
     private var handle: OpaquePointer?
-    private let queue = DispatchQueue(label: "com.copyclippro.sqlite")
+    private let queue = DispatchQueue(label: "com.snapclip.sqlite")
 
     /// Đường dẫn file db đang mở (dùng cho backup/log).
     let path: String

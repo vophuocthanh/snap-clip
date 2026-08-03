@@ -25,7 +25,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var keyMonitor: Any?
     private var panelDismissedAt: Date?
 
-    private let log = Logger(subsystem: "com.copyclippro", category: "app")
+    private let log = Logger(subsystem: "com.snapclip", category: "app")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("App started")
@@ -79,14 +79,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.isVisible = true
         guard let button = statusItem.button else {
-            NSLog("[CCP] setupStatusItem: button == nil")
+            NSLog("[SNC] setupStatusItem: button == nil")
             return
         }
 
         // Use emoji as label: color, prominent, easy to spot on the menu bar with many icons.
         button.title = "📋"
         button.imagePosition = .noImage
-        button.toolTip = "CopyClipPro — lịch sử clipboard (\(currentHotkeyLabel))"
+        button.toolTip = "SnapClip — lịch sử clipboard (\(currentHotkeyLabel))"
         button.action = #selector(statusItemClicked(_:))
         button.target = self
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -109,7 +109,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func showContextMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Mở CopyClipPro", action: #selector(togglePopover), keyEquivalent: "")
+        menu.addItem(withTitle: "Mở SnapClip", action: #selector(togglePopover), keyEquivalent: "")
         menu.addItem(withTitle: "Cài đặt…", action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Thoát", action: #selector(quit), keyEquivalent: "q")
@@ -144,7 +144,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func togglePopover() {
-        guard let panel else { NSLog("[CCP] togglePopover: panel == nil"); return }
+        guard let panel else { NSLog("[SNC] togglePopover: panel == nil"); return }
         if panel.isVisible {
             closePopover()
         } else {
@@ -157,8 +157,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func showPopover() {
-        guard let panel else { NSLog("[CCP] showPopover: panel == nil"); return }
-        guard let historyVM else { NSLog("[CCP] showPopover: historyVM == nil"); return }
+        guard let panel else { NSLog("[SNC] showPopover: panel == nil"); return }
+        guard let historyVM else { NSLog("[SNC] showPopover: historyVM == nil"); return }
         historyVM.selectedIndex = 0
         historyVM.reload()
 
@@ -169,7 +169,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let activeScreen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
             ?? NSScreen.main
             ?? NSScreen.screens.first
-        guard let screen = activeScreen else { NSLog("[CCP] showPopover: no screen"); return }
+        guard let screen = activeScreen else { NSLog("[SNC] showPopover: no screen"); return }
         let vf = screen.visibleFrame
 
         var origin: NSPoint
@@ -339,11 +339,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             ) {
                 hotkey = hk
                 currentHotkeyLabel = c.label
-                statusItem?.button?.toolTip = "CopyClipPro — lịch sử clipboard (\(c.label))"
+                statusItem?.button?.toolTip = "SnapClip — lịch sử clipboard (\(c.label))"
                 return
             }
         }
-        NSLog("[CCP] hotkey registration FAILED cho tất cả combo — chỉ mở được bằng click icon")
+        NSLog("[SNC] hotkey registration FAILED cho tất cả combo — chỉ mở được bằng click icon")
     }
 
     // MARK: - Settings window
@@ -366,7 +366,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Cài đặt CopyClipPro"
+        window.title = "Cài đặt SnapClip"
         window.contentViewController = NSHostingController(rootView: view)
         window.center()
         window.isReleasedWhenClosed = false
@@ -404,7 +404,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func presentFatal(_ message: String) {
         log.error("Fatal error: \(message)")
         let alert = NSAlert()
-        alert.messageText = "CopyClipPro"
+        alert.messageText = "SnapClip"
         alert.informativeText = message
         alert.alertStyle = .critical
         alert.runModal()

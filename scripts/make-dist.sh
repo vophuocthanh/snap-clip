@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Đóng gói CopyClipPro để phân phối sang máy Mac khác.
+# Đóng gói SnapClip để phân phối sang máy Mac khác.
 # Tạo universal binary (Apple Silicon + Intel) → .app → .zip và .dmg.
 #
 # Yêu cầu máy build: macOS + Xcode/Swift. Máy đích: macOS 14+ (không cần Xcode).
@@ -8,7 +8,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="CopyClipPro"
+APP_NAME="SnapClip"
 DIST="$ROOT/dist"
 APP_DIR="$DIST/$APP_NAME.app"
 

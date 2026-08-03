@@ -1,8 +1,8 @@
-# Kiến trúc CopyClipPro
+# Kiến trúc SnapClip
 
 ## 1. Tổng quan
 
-CopyClipPro áp dụng **Clean Architecture phân lớp** kết hợp **MVVM** cho tầng trình bày. Mục tiêu: tách biệt rõ ràng, dễ kiểm thử, dễ mở rộng trong nhiều năm, và giữ Domain hoàn toàn độc lập với framework của Apple.
+SnapClip áp dụng **Clean Architecture phân lớp** kết hợp **MVVM** cho tầng trình bày. Mục tiêu: tách biệt rõ ràng, dễ kiểm thử, dễ mở rộng trong nhiều năm, và giữ Domain hoàn toàn độc lập với framework của Apple.
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -47,19 +47,19 @@ CopyClipPro áp dụng **Clean Architecture phân lớp** kết hợp **MVVM** c
 ## 3. Các quyết định kỹ thuật chính
 
 ### 3.1 Theo dõi clipboard — polling `changeCount`
-macOS **không** phát notification công khai khi pasteboard đổi. Cách chuẩn là poll `NSPasteboard.changeCount` (một `Int` tăng dần). So sánh số nguyên rất rẻ; chỉ khi đổi mới thực sự đọc nội dung → CPU ~0% khi rảnh. Interval mặc định 0.4s cân bằng độ trễ cảm nhận và tải hệ thống. Xem [ClipboardMonitor.swift](../Sources/CopyClipPro/Infrastructure/Clipboard/ClipboardMonitor.swift).
+macOS **không** phát notification công khai khi pasteboard đổi. Cách chuẩn là poll `NSPasteboard.changeCount` (một `Int` tăng dần). So sánh số nguyên rất rẻ; chỉ khi đổi mới thực sự đọc nội dung → CPU ~0% khi rảnh. Interval mặc định 0.4s cân bằng độ trễ cảm nhận và tải hệ thống. Xem [ClipboardMonitor.swift](../Sources/SnapClip/Infrastructure/Clipboard/ClipboardMonitor.swift).
 
 ### 3.2 Global hotkey — Carbon `RegisterEventHotKey`
-Không cần quyền Accessibility (khác `CGEventTap`), là API chính thức và ổn định nhất cho global hotkey. Zero-dependency. `setupHotkey()` thử lần lượt một danh sách combo (**⌘⌥V → ⌃⌥⌘V → ⌃⌥V → ⌘⌥C**) và lấy combo đầu tiên đăng ký được — vì `RegisterEventHotKey` sẽ **thất bại** nếu combo đã bị app khác chiếm (vd Raycast giữ ⌘⇧V). Xem [GlobalHotkey.swift](../Sources/CopyClipPro/Infrastructure/Hotkey/GlobalHotkey.swift).
+Không cần quyền Accessibility (khác `CGEventTap`), là API chính thức và ổn định nhất cho global hotkey. Zero-dependency. `setupHotkey()` thử lần lượt một danh sách combo (**⌘⌥V → ⌃⌥⌘V → ⌃⌥V → ⌘⌥C**) và lấy combo đầu tiên đăng ký được — vì `RegisterEventHotKey` sẽ **thất bại** nếu combo đã bị app khác chiếm (vd Raycast giữ ⌘⇧V). Xem [GlobalHotkey.swift](../Sources/SnapClip/Infrastructure/Hotkey/GlobalHotkey.swift).
 
 ### 3.3 Lưu trữ — SQLite qua C API
 Dùng `libsqlite3` có sẵn trong macOS (không thêm package). Bật **WAL** để ghi nhanh & đọc không chặn ghi, `synchronous = NORMAL` cân bằng an toàn/tốc độ. Mọi truy cập serialize qua một `DispatchQueue` nội bộ. Index trên `created_at`, `content_hash`, và cờ pin/favorite. Dedup bằng FNV-1a hash (áp dụng cho cả chuỗi text lẫn byte ảnh) để tránh so sánh dữ liệu dài.
 
 ### 3.4 Lưu hình ảnh — BLOB + thumbnail tách rời
-Item ảnh lưu **2 cột BLOB**: `image_data` (PNG gốc, dùng khi paste/preview) và `thumbnail_data` (PNG ≤240px, dùng hiển thị danh sách). Điểm mấu chốt về hiệu năng: **`fetch()` cho danh sách CHỈ tải `thumbnail_data`** (~vài chục KB), ảnh gốc (~vài trăm KB) chỉ nạp theo yêu cầu qua `imageData(id:)` khi người dùng chọn để paste → danh sách luôn nhẹ dù chứa nhiều ảnh. `ClipboardMonitor` nhận diện ảnh từ nhiều nguồn: dữ liệu ảnh trực tiếp (png/tiff — screenshot ⌘⇧⌃4, copy ảnh), file ảnh copy từ Finder (file-url), và `NSImage(pasteboard:)` dự phòng. Chuyển đổi/thu nhỏ ở [ImageUtils.swift](../Sources/CopyClipPro/Infrastructure/Clipboard/ImageUtils.swift).
+Item ảnh lưu **2 cột BLOB**: `image_data` (PNG gốc, dùng khi paste/preview) và `thumbnail_data` (PNG ≤240px, dùng hiển thị danh sách). Điểm mấu chốt về hiệu năng: **`fetch()` cho danh sách CHỈ tải `thumbnail_data`** (~vài chục KB), ảnh gốc (~vài trăm KB) chỉ nạp theo yêu cầu qua `imageData(id:)` khi người dùng chọn để paste → danh sách luôn nhẹ dù chứa nhiều ảnh. `ClipboardMonitor` nhận diện ảnh từ nhiều nguồn: dữ liệu ảnh trực tiếp (png/tiff — screenshot ⌘⇧⌃4, copy ảnh), file ảnh copy từ Finder (file-url), và `NSImage(pasteboard:)` dự phòng. Chuyển đổi/thu nhỏ ở [ImageUtils.swift](../Sources/SnapClip/Infrastructure/Clipboard/ImageUtils.swift).
 
 ### 3.5 Cửa sổ chính — `FloatingPanel` thay vì `NSPopover`
-`NSPopover` luôn ghim mũi tên sát nút status item nên không tạo được khoảng hở với menu bar và không kiểm soát được màn hình hiển thị. Ta dùng một [FloatingPanel](../Sources/CopyClipPro/App/FloatingPanel.swift) (subclass `NSPanel`) để tự do định vị + bo góc + đổ bóng như Raycast.
+`NSPopover` luôn ghim mũi tên sát nút status item nên không tạo được khoảng hở với menu bar và không kiểm soát được màn hình hiển thị. Ta dùng một [FloatingPanel](../Sources/SnapClip/App/FloatingPanel.swift) (subclass `NSPanel`) để tự do định vị + bo góc + đổ bóng như Raycast.
 
 > **Bài học quan trọng:** styleMask phải **tối giản `[.borderless]`**. Tổ hợp `.nonactivatingPanel + .fullSizeContentView` kèm override `canBecomeKey` từng gây **treo `NSPanel.init`** → panel không tạo xong → hotkey (chạy ngay sau) không đăng ký. Đây là gốc của loạt lỗi "panel == nil" và "hotkey không ăn".
 

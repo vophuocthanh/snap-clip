@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import CopyClipPro
+@testable import SnapClip
 
 /// Tests cho Domain layer: ClipboardItem.
 struct ClipboardItemTests {

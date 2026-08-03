@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "CopyClipPro",
+    name: "SnapClip",
     platforms: [
         .macOS(.v14)
     ],
     targets: [
         .executableTarget(
-            name: "CopyClipPro",
-            path: "Sources/CopyClipPro",
+            name: "SnapClip",
+            path: "Sources/SnapClip",
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ],
@@ -18,9 +18,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "CopyClipProTests",
-            dependencies: ["CopyClipPro"],
-            path: "Tests/CopyClipProTests",
+            name: "SnapClipTests",
+            dependencies: ["SnapClip"],
+            path: "Tests/SnapClipTests",
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]

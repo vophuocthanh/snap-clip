@@ -5,7 +5,7 @@
 Dùng **Swift Testing** framework (Xcode 16+), không dùng XCTest.
 
 ```
-Tests/CopyClipProTests/
+Tests/SnapClipTests/
 ├── ClipboardItemTests.swift    # Domain entity tests
 ├── HistoryViewModelTests.swift # ViewModel tests (TODO)
 └── SQLiteRepositoryTests.swift # Repository integration tests (TODO)

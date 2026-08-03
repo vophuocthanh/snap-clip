@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>CopyClipPro</string>
+    <string>SnapClip</string>
     <key>CFBundleDisplayName</key>
-    <string>CopyClipPro</string>
+    <string>SnapClip</string>
     <key>CFBundleIdentifier</key>
-    <string>vn.dipro.copyclippro</string>
+    <string>vn.dipro.snapclip</string>
     <key>CFBundleExecutable</key>
-    <string>CopyClipPro</string>
+    <string>SnapClip</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIconName</key>
@@ -26,9 +26,9 @@
     <key>LSUIElement</key>
     <false/>
     <key>NSHumanReadableCopyright</key>
-    <string>© 2026 Dipro</string>
+    <string>© 2026 SnapClip</string>
     <!-- Giải thích quyền khi tự động dán (synthesize Cmd+V) -->
     <key>NSAppleEventsUsageDescription</key>
-    <string>CopyClipPro cần quyền để tự động dán nội dung đã chọn vào ứng dụng đang mở.</string>
+    <string>SnapClip cần quyền để tự động dán nội dung đã chọn vào ứng dụng đang mở.</string>
 </dict>
 </plist>

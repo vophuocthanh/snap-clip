@@ -24,7 +24,7 @@ final class HistoryViewModel: ObservableObject {
 
     private let repository: ClipboardRepository
     private var reloadTask: Task<Void, Never>?
-    private let log = Logger(subsystem: "com.copyclippro", category: "viewmodel")
+    private let log = Logger(subsystem: "com.snapclip", category: "viewmodel")
 
     init(repository: ClipboardRepository) {
         self.repository = repository

@@ -2,7 +2,7 @@
   "name": "build-copy-clip",
   "version": "1.0.0",
   "private": true,
-  "description": "CopyClipPro - macOS Clipboard Manager",
+  "description": "SnapClip - macOS Clipboard Manager",
   "scripts": {
     "prepare": "husky"
   },

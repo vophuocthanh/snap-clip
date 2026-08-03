@@ -1,6 +1,6 @@
-# Phân phối & Phát hành CopyClipPro
+# Phân phối & Phát hành SnapClip
 
-> **Lưu ý:** CopyClipPro là app **macOS native** (Swift/AppKit/SwiftUI). Không thể
+> **Lưu ý:** SnapClip là app **macOS native** (Swift/AppKit/SwiftUI). Không thể
 > đóng gói bằng Docker hay chạy trên Linux/Windows. Máy đích bắt buộc là **macOS 14+**.
 
 ## 1. Đóng gói để đưa sang máy Mac khác (nhanh)
@@ -11,16 +11,16 @@
 
 Sinh ra trong `dist/`:
 
-- `CopyClipPro.app` — universal binary (Apple Silicon **và** Intel).
-- `CopyClipPro.zip` — gọn, dễ gửi.
-- `CopyClipPro.dmg` — ảnh đĩa, kéo-thả cài đặt.
+- `SnapClip.app` — universal binary (Apple Silicon **và** Intel).
+- `SnapClip.zip` — gọn, dễ gửi.
+- `SnapClip.dmg` — ảnh đĩa, kéo-thả cài đặt.
 
 ### Chạy trên máy Mac khác
 
-1. Copy `.dmg` (hoặc `.zip`) sang máy đó → mở → kéo `CopyClipPro.app` vào `/Applications`.
+1. Copy `.dmg` (hoặc `.zip`) sang máy đó → mở → kéo `SnapClip.app` vào `/Applications`.
 2. App đang ký **ad-hoc** (chưa notarize) nên Gatekeeper chặn lần đầu. Gỡ chặn:
    ```bash
-   xattr -cr "/Applications/CopyClipPro.app"
+   xattr -cr "/Applications/SnapClip.app"
    ```
    Hoặc: chuột phải vào app → **Open** → **Open** lại lần nữa.
 
@@ -32,16 +32,16 @@ Sinh ra trong `dist/`:
 ```bash
 # 1. Ký bằng Developer ID Application
 codesign --force --deep --options runtime \
-  --sign "Developer ID Application: TÊN CỦA BẠN (TEAMID)" dist/CopyClipPro.app
+  --sign "Developer ID Application: TÊN CỦA BẠN (TEAMID)" dist/SnapClip.app
 
 # 2. Nén và gửi notarize
-ditto -c -k --keepParent dist/CopyClipPro.app dist/CopyClipPro-notarize.zip
-xcrun notarytool submit dist/CopyClipPro-notarize.zip \
+ditto -c -k --keepParent dist/SnapClip.app dist/SnapClip-notarize.zip
+xcrun notarytool submit dist/SnapClip-notarize.zip \
   --apple-id "you@example.com" --team-id "TEAMID" --password "APP_SPECIFIC_PASSWORD" \
   --wait
 
 # 3. Đóng dấu (staple) kết quả vào app
-xcrun stapler staple dist/CopyClipPro.app
+xcrun stapler staple dist/SnapClip.app
 ```
 
 Sau đó đóng lại thành `.dmg`/`.zip` để phân phối — máy đích mở thẳng, không cảnh báo.
@@ -66,7 +66,7 @@ dependencies: [
 ],
 targets: [
     .executableTarget(
-        name: "CopyClipPro",
+        name: "SnapClip",
         dependencies: ["Sparkle"],
         ...
     ),
@@ -89,11 +89,11 @@ lazy var updater = SPUStandardUpdaterController(
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>CopyClipPro Changelog</title>
+    <title>SnapClip Changelog</title>
     <item>
       <title>Version 1.0.1</title>
       <sparkle:version>1.0.1</sparkle:version>
-      <enclosure url="https://example.com/CopyClipPro-1.0.1.dmg"
+      <enclosure url="https://example.com/SnapClip-1.0.1.dmg"
                  sparkle:edSignature="..."
                  length="..."
                  type="application/octet-stream" />
@@ -108,7 +108,7 @@ lazy var updater = SPUStandardUpdaterController(
 
 ```bash
 # Build + codesign + notarize
-./scripts/package.sh release      # tạo dist/CopyClipPro.app
+./scripts/package.sh release      # tạo dist/SnapClip.app
 ./scripts/make-dist.sh             # tạo .dmg
 
 # Generate delta update + ký
