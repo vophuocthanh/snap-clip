@@ -1,8 +1,8 @@
 import Foundation
 import Combine
+import os
 
-/// ViewModel for history list (MVVM). It's the only connection between UI (SwiftUI)
-/// and Domain (repository) — UI never touches SQLite directly.
+/// ViewModel for history list (MVVM).
 @MainActor
 final class HistoryViewModel: ObservableObject {
     @Published private(set) var items: [ClipboardItem] = []
@@ -12,23 +12,29 @@ final class HistoryViewModel: ObservableObject {
     @Published var onlyFavorites: Bool = false {
         didSet { reload() }
     }
-    /// Index of the currently selected item (used for keyboard navigation).
+    @Published var onlySnippets: Bool = false {
+        didSet { reload() }
+    }
+    @Published var selectedTag: String = "" {
+        didSet { reload() }
+    }
+    @Published private(set) var availableTags: [String] = []
     @Published var selectedIndex: Int = 0
     @Published private(set) var errorMessage: String?
 
     private let repository: ClipboardRepository
     private var reloadTask: Task<Void, Never>?
+    private let log = Logger(subsystem: "com.copyclippro", category: "viewmodel")
 
     init(repository: ClipboardRepository) {
         self.repository = repository
         reload()
     }
 
-    /// Debounce reload when typing search text (avoid querying every character).
     private func scheduleReload() {
         reloadTask?.cancel()
         reloadTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 120_000_000) // 120ms
+            try? await Task.sleep(nanoseconds: 120_000_000)
             guard !Task.isCancelled else { return }
             self?.reload()
         }
@@ -37,14 +43,18 @@ final class HistoryViewModel: ObservableObject {
     func reload() {
         let query = HistoryQuery(
             searchText: searchText,
-            onlyFavorites: onlyFavorites
+            onlyFavorites: onlyFavorites,
+            onlySnippets: onlySnippets,
+            tag: selectedTag
         )
         do {
             items = try repository.fetch(query)
             if selectedIndex >= items.count { selectedIndex = max(0, items.count - 1) }
+            availableTags = try repository.allTags()
             errorMessage = nil
         } catch {
             errorMessage = "Failed to load history: \(error)"
+            log.error("reload failed: \(error)")
         }
     }
 
@@ -70,6 +80,24 @@ final class HistoryViewModel: ObservableObject {
         reload()
     }
 
+    // MARK: - Snippets
+
+    func createSnippet(content: String, tags: String) {
+        guard !content.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        do {
+            try repository.createSnippet(content: content, tags: tags)
+            reload()
+        } catch {
+            errorMessage = "Failed to create snippet: \(error)"
+            log.error("createSnippet failed: \(error)")
+        }
+    }
+
+    func updateTags(_ tags: String, for item: ClipboardItem) {
+        try? repository.updateTags(tags, id: item.id)
+        reload()
+    }
+
     // MARK: - Keyboard Navigation
 
     var selectedItem: ClipboardItem? {
@@ -84,7 +112,6 @@ final class HistoryViewModel: ObservableObject {
 
     // MARK: - Detail View
 
-    /// Tải dữ liệu đầy đủ cho detail view (ảnh gốc, RTF, file). Chạy trên background.
     func loadFullContent(for item: ClipboardItem) async -> ClipboardItem {
         var loaded = item
         switch item.type {

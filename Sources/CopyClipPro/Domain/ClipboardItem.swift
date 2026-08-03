@@ -8,6 +8,7 @@ enum ClipboardContentType: String, Codable, Sendable, CaseIterable {
     case image
     case file
     case richText
+    case snippet
 
     /// Name of SF Symbol used for display icon in list.
     var symbolName: String {
@@ -18,6 +19,7 @@ enum ClipboardContentType: String, Codable, Sendable, CaseIterable {
         case .image: return "photo"
         case .file: return "doc"
         case .richText: return "textformat"
+        case .snippet: return "square.and.pencil"
         }
     }
 }
@@ -28,32 +30,29 @@ enum ClipboardContentType: String, Codable, Sendable, CaseIterable {
 /// có thể thay đổi. Là `Sendable` để an toàn khi truyền qua các actor/thread.
 struct ClipboardItem: Identifiable, Hashable, Sendable {
     let id: UUID
-    /// Nội dung dạng text đã chuẩn hoá (dùng cho hiển thị + tìm kiếm).
     var content: String
-    /// Hash của nội dung để chống trùng lặp nhanh.
     let contentHash: String
     var type: ClipboardContentType
     let createdAt: Date
     var isPinned: Bool
     var isFavorite: Bool
+    /// Đánh dấu item do người dùng tạo tay (snippet), không phải từ clipboard.
+    var isSnippet: Bool
+    /// Danh sách tag, cách nhau bằng dấu phẩy, dùng cho lọc/phân loại.
+    var tags: String
     let sourceAppBundleId: String?
     let sourceAppName: String?
 
     // Image
-    /// Dữ liệu ảnh gốc (PNG) — chỉ có khi vừa tạo/khi cần paste; nil khi tải danh sách.
     var imageData: Data?
-    /// Thumbnail PNG nhỏ để hiển thị nhanh trong danh sách.
     var thumbnailData: Data?
 
-    /// Dữ liệu RTF gốc — dùng để paste lại hoặc hiển thị rich preview.
+    // Rich text
     var richTextData: Data?
 
     // File
-    /// Security-scoped bookmark cho phép truy cập file gốc.
     var fileBookmark: Data?
-    /// Đường dẫn gốc của file (hiển thị cho người dùng).
     var filePath: String?
-    /// UTI của file (public.plain-text, public.jpeg, …).
     var fileUTI: String?
 
     init(
@@ -64,6 +63,8 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
         createdAt: Date = Date(),
         isPinned: Bool = false,
         isFavorite: Bool = false,
+        isSnippet: Bool = false,
+        tags: String = "",
         sourceAppBundleId: String? = nil,
         sourceAppName: String? = nil,
         imageData: Data? = nil,
@@ -80,6 +81,8 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
         self.createdAt = createdAt
         self.isPinned = isPinned
         self.isFavorite = isFavorite
+        self.isSnippet = isSnippet
+        self.tags = tags
         self.sourceAppBundleId = sourceAppBundleId
         self.sourceAppName = sourceAppName
         self.imageData = imageData
@@ -98,6 +101,8 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
         case .file:
             return filePath.flatMap { URL(fileURLWithPath: $0).lastPathComponent }
                 ?? content
+        case .snippet:
+            return content
         case .richText:
             return content
         case .color:
@@ -113,8 +118,9 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
         }
     }
 
-    /// Nội dung mô tả phụ (dòng 2) — kích thước ảnh, tên app, v.v.
+    /// Nội dung mô tả phụ (dòng 2).
     var subtitle: String {
+        if !tags.isEmpty { return tags }
         switch type {
         case .image:
             return sourceAppName ?? "Hình ảnh"
@@ -122,6 +128,8 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
             let name = filePath.flatMap { URL(fileURLWithPath: $0).lastPathComponent } ?? ""
             let uti = fileUTI ?? ""
             return [name, uti].filter { !$0.isEmpty }.joined(separator: " · ")
+        case .snippet:
+            return "Snippet"
         case .richText:
             return sourceAppName ?? "Rich Text"
         case .color:
@@ -131,12 +139,11 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
         }
     }
 
-    /// Hash ổn định (FNV-1a) dùng cho dedup.
+    /// Hash ổn định (FNV-1a).
     static func hash(for content: String) -> String {
         hash(for: Array(content.utf8))
     }
 
-    /// Hash dữ liệu nhị phân (dùng cho ảnh).
     static func hash(for data: Data) -> String {
         hash(for: Array(data))
     }

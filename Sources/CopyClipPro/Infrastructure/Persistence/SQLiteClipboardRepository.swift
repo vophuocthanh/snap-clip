@@ -6,7 +6,7 @@ import Foundation
 /// tăng dần trong tương lai mà không phá dữ liệu người dùng.
 final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable {
     private let db: SQLiteDatabase
-    private static let currentSchemaVersion = 3
+    private static let currentSchemaVersion = 4
 
     init(db: SQLiteDatabase) throws {
         self.db = db
@@ -70,6 +70,14 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             try db.exec("ALTER TABLE clipboard_items ADD COLUMN file_uti TEXT;")
             try db.exec("PRAGMA user_version = 3;")
         }
+        if version < 4 {
+            // Sprint 5: snippet flag, tags, encryption flag.
+            try db.exec("ALTER TABLE clipboard_items ADD COLUMN is_snippet INTEGER NOT NULL DEFAULT 0;")
+            try db.exec("ALTER TABLE clipboard_items ADD COLUMN tags TEXT NOT NULL DEFAULT '';")
+            try db.exec("CREATE INDEX IF NOT EXISTS idx_items_tags ON clipboard_items (tags);")
+            try db.exec("CREATE INDEX IF NOT EXISTS idx_items_snippet ON clipboard_items (is_snippet);")
+            try db.exec("PRAGMA user_version = 4;")
+        }
     }
 
     private func currentUserVersion() throws -> Int {
@@ -102,10 +110,11 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             """
             INSERT INTO clipboard_items
                 (id, content, content_hash, type, created_at,
-                 is_pinned, is_favorite, source_bundle_id, source_app_name,
+                 is_pinned, is_favorite, is_snippet, tags,
+                 source_bundle_id, source_app_name,
                  image_data, thumbnail_data, rich_text_data,
                  file_bookmark, file_path, file_uti)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """,
             bind: { stmt in
                 stmt.bindText(item.id.uuidString, at: 1)
@@ -115,14 +124,16 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
                 stmt.bindDouble(item.createdAt.timeIntervalSince1970, at: 5)
                 stmt.bindInt(item.isPinned ? 1 : 0, at: 6)
                 stmt.bindInt(item.isFavorite ? 1 : 0, at: 7)
-                stmt.bindTextOrNull(item.sourceAppBundleId, at: 8)
-                stmt.bindTextOrNull(item.sourceAppName, at: 9)
-                stmt.bindBlobOrNull(item.imageData, at: 10)
-                stmt.bindBlobOrNull(item.thumbnailData, at: 11)
-                stmt.bindBlobOrNull(item.richTextData, at: 12)
-                stmt.bindBlobOrNull(item.fileBookmark, at: 13)
-                stmt.bindTextOrNull(item.filePath, at: 14)
-                stmt.bindTextOrNull(item.fileUTI, at: 15)
+                stmt.bindInt(item.isSnippet ? 1 : 0, at: 8)
+                stmt.bindText(item.tags, at: 9)
+                stmt.bindTextOrNull(item.sourceAppBundleId, at: 10)
+                stmt.bindTextOrNull(item.sourceAppName, at: 11)
+                stmt.bindBlobOrNull(item.imageData, at: 12)
+                stmt.bindBlobOrNull(item.thumbnailData, at: 13)
+                stmt.bindBlobOrNull(item.richTextData, at: 14)
+                stmt.bindBlobOrNull(item.fileBookmark, at: 15)
+                stmt.bindTextOrNull(item.filePath, at: 16)
+                stmt.bindTextOrNull(item.fileUTI, at: 17)
             }
         )
         return item
@@ -171,7 +182,7 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
     }
 
     func fetch(_ query: HistoryQuery) throws -> [ClipboardItem] {
-        var sql = "SELECT id, content, content_hash, type, created_at, is_pinned, is_favorite, source_bundle_id, source_app_name, thumbnail_data, file_path, file_uti FROM clipboard_items"
+        var sql = "SELECT id, content, content_hash, type, created_at, is_pinned, is_favorite, source_bundle_id, source_app_name, thumbnail_data, file_path, file_uti, is_snippet, tags FROM clipboard_items"
         var conditions: [String] = []
         if !query.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
             conditions.append("content LIKE ? ESCAPE '\\'")
@@ -179,10 +190,15 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
         if query.onlyFavorites {
             conditions.append("is_favorite = 1")
         }
+        if query.onlySnippets {
+            conditions.append("is_snippet = 1")
+        }
+        if !query.tag.isEmpty {
+            conditions.append("tags LIKE ? ESCAPE '\\'")
+        }
         if !conditions.isEmpty {
             sql += " WHERE " + conditions.joined(separator: " AND ")
         }
-        // Pinned lên đầu, rồi mới nhất trước.
         sql += " ORDER BY is_pinned DESC, created_at DESC LIMIT ? OFFSET ?;"
 
         return try db.run(
@@ -192,6 +208,13 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
                 let trimmed = query.searchText.trimmingCharacters(in: .whitespaces)
                 if !trimmed.isEmpty {
                     let escaped = trimmed
+                        .replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "%", with: "\\%")
+                        .replacingOccurrences(of: "_", with: "\\_")
+                    stmt.bindText("%\(escaped)%", at: idx); idx += 1
+                }
+                if !query.tag.isEmpty {
+                    let escaped = query.tag
                         .replacingOccurrences(of: "\\", with: "\\\\")
                         .replacingOccurrences(of: "%", with: "\\%")
                         .replacingOccurrences(of: "_", with: "\\_")
@@ -261,6 +284,38 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
         )
     }
 
+    // MARK: - Snippets & Tags
+
+    func createSnippet(content: String, tags: String) throws -> ClipboardItem {
+        let item = ClipboardItem(
+            content: content,
+            type: .snippet,
+            isSnippet: true,
+            tags: tags
+        )
+        return try insert(item)
+    }
+
+    func updateTags(_ tags: String, id: UUID) throws {
+        try db.execute(
+            "UPDATE clipboard_items SET tags = ? WHERE id = ?;",
+            bind: {
+                $0.bindText(tags, at: 1)
+                $0.bindText(id.uuidString, at: 2)
+            }
+        )
+    }
+
+    func allTags() throws -> [String] {
+        let rows = try db.run(
+            "SELECT DISTINCT tags FROM clipboard_items WHERE tags != '' ORDER BY tags;",
+            read: { $0.columnText(0) }
+        )
+        // Tách tag chuỗi "a,b,c" → [a, b, c]
+        let all = rows.flatMap { $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) } }
+        return Array(Set(all)).filter { !$0.isEmpty }.sorted()
+    }
+
     // MARK: - Row decoding
 
     private static func decode(_ stmt: OpaquePointer) -> ClipboardItem {
@@ -272,6 +327,8 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
             createdAt: Date(timeIntervalSince1970: stmt.columnDouble(4)),
             isPinned: stmt.columnInt(5) == 1,
             isFavorite: stmt.columnInt(6) == 1,
+            isSnippet: stmt.columnInt(12) == 1,
+            tags: stmt.columnText(13),
             sourceAppBundleId: stmt.columnTextOrNil(7),
             sourceAppName: stmt.columnTextOrNil(8),
             imageData: nil,

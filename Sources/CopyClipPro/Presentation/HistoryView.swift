@@ -1,24 +1,24 @@
 import SwiftUI
 
-/// Popover chính hiển thị clipboard history: ô tìm kiếm + danh sách + footer.
+/// Popover chính hiển thị clipboard history.
 struct HistoryView: View {
     @ObservedObject var viewModel: HistoryViewModel
 
-    /// Người dùng chọn một item (click hoặc Enter).
     var onSelect: (ClipboardItem) -> Void
-    /// Đóng popover (Esc).
     var onClose: () -> Void
-    /// Mở cửa sổ Settings.
     var onOpenSettings: () -> Void
-    /// Mở detail view toàn màn hình.
     var onShowDetail: (ClipboardItem) -> Void
 
     @FocusState private var searchFocused: Bool
+    @State private var showSnippetSheet = false
+    @State private var snippetContent = ""
+    @State private var snippetTags = ""
 
     var body: some View {
         VStack(spacing: 0) {
             dragHandle
             searchBar
+            filterBar
             Divider()
             content
             Divider()
@@ -28,13 +28,14 @@ struct HistoryView: View {
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onAppear { searchFocused = true }
+        .sheet(isPresented: $showSnippetSheet) { createSnippetSheet }
     }
 
-    // MARK: - Drag handle (kéo di chuyển panel)
+    // MARK: - Drag handle
 
     private var dragHandle: some View {
         ZStack {
-            WindowDragArea() // toàn dải trên cùng kéo được
+            WindowDragArea()
             Capsule()
                 .fill(Color.secondary.opacity(0.35))
                 .frame(width: 40, height: 5)
@@ -63,6 +64,16 @@ struct HistoryView: View {
                 }
                 .buttonStyle(.plain)
             }
+            filterButtons
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Filter buttons
+
+    private var filterButtons: some View {
+        HStack(spacing: 4) {
             Button {
                 viewModel.onlyFavorites.toggle()
             } label: {
@@ -71,9 +82,97 @@ struct HistoryView: View {
             }
             .buttonStyle(.plain)
             .help("Chỉ hiện mục yêu thích")
+
+            Button {
+                viewModel.onlySnippets.toggle()
+            } label: {
+                Image(systemName: viewModel.onlySnippets ? "square.and.pencil.fill" : "square.and.pencil")
+                    .foregroundStyle(viewModel.onlySnippets ? Color.accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Chỉ hiện snippet")
+
+            Button {
+                showSnippetSheet = true
+            } label: {
+                Image(systemName: "plus.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Tạo snippet mới")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+    }
+
+    // MARK: - Tag filter
+
+    @ViewBuilder
+    private var filterBar: some View {
+        if !viewModel.availableTags.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    Button("Tất cả") {
+                        viewModel.selectedTag = ""
+                    }
+                    .font(.caption2)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(viewModel.selectedTag.isEmpty ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .clipShape(Capsule())
+
+                    ForEach(viewModel.availableTags, id: \.self) { tag in
+                        Button(tag) {
+                            viewModel.selectedTag = (viewModel.selectedTag == tag) ? "" : tag
+                        }
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(viewModel.selectedTag == tag ? Color.accentColor.opacity(0.2) : Color.clear)
+                        .clipShape(Capsule())
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    // MARK: - Create Snippet Sheet
+
+    private var createSnippetSheet: some View {
+        VStack(spacing: 16) {
+            Text("Tạo Snippet mới")
+                .font(.headline)
+
+            TextEditor(text: $snippetContent)
+                .font(.body)
+                .frame(height: 120)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+
+            TextField("Tag (cách nhau bằng phẩy)", text: $snippetTags)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 12) {
+                Button("Huỷ") {
+                    showSnippetSheet = false
+                    snippetContent = ""
+                    snippetTags = ""
+                }
+                Button("Lưu") {
+                    viewModel.createSnippet(content: snippetContent, tags: snippetTags)
+                    showSnippetSheet = false
+                    snippetContent = ""
+                    snippetTags = ""
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(snippetContent.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 320, height: 260)
     }
 
     // MARK: - List
@@ -88,34 +187,27 @@ struct HistoryView: View {
                     LazyVStack(spacing: 2) {
                         ForEach(Array(viewModel.items.enumerated()), id: \.element.id) { index, item in
                             HStack(spacing: 2) {
-                            let isSelected = index == viewModel.selectedIndex
-                            HistoryRow(
-                                item: item,
-                                isSelected: isSelected
-                            )
-                            // Định danh theo item.id (KHÔNG theo index) để SwiftUI cập nhật
-                            // đúng nội dung/ảnh khi danh sách thay đổi — tránh kẹt ảnh cũ.
-                            .id(item.id)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.selectedIndex = index
-                                onSelect(item)
+                                let isSelected = index == viewModel.selectedIndex
+                                HistoryRow(item: item, isSelected: isSelected)
+                                    .id(item.id)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.selectedIndex = index
+                                        onSelect(item)
+                                    }
+                                Button {
+                                    onShowDetail(item)
+                                } label: {
+                                    Image(systemName: "info.circle")
+                                        .font(.caption)
+                                        .foregroundStyle(isSelected ? Color.white : Color.secondary.opacity(0.4))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Xem chi tiết")
+                                .padding(.trailing, 6)
                             }
-
-                            // Nút chi tiết
-                            Button {
-                                onShowDetail(item)
-                            } label: {
-                                Image(systemName: "info.circle")
-                                    .font(.caption)
-                                    .foregroundStyle(isSelected ? Color.white : Color.secondary.opacity(0.4))
-                            }
-                            .buttonStyle(.plain)
-                            .help("Xem chi tiết")
-                            .padding(.trailing, 6)
+                            .contextMenu { rowMenu(for: item) }
                         }
-                        .contextMenu { rowMenu(for: item) }
-                    }
                     }
                     .padding(.vertical, 4)
                     .padding(.horizontal, 6)
@@ -132,13 +224,15 @@ struct HistoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "doc.on.clipboard")
+            Image(systemName: viewModel.onlySnippets ? "square.and.pencil" : "doc.on.clipboard")
                 .font(.system(size: 34))
                 .foregroundStyle(.tertiary)
             Text(viewModel.searchText.isEmpty ? "Chưa có mục nào" : "Không tìm thấy kết quả")
                 .foregroundStyle(.secondary)
             if viewModel.searchText.isEmpty {
-                Text("Hãy copy nội dung bất kỳ để bắt đầu")
+                Text(viewModel.onlySnippets
+                     ? "Nhấn + để tạo snippet mới"
+                     : "Hãy copy nội dung bất kỳ để bắt đầu")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -153,6 +247,14 @@ struct HistoryView: View {
         Divider()
         Button(item.isPinned ? "Bỏ ghim" : "Ghim") { viewModel.togglePin(item) }
         Button(item.isFavorite ? "Bỏ yêu thích" : "Yêu thích") { viewModel.toggleFavorite(item) }
+        if !item.tags.isEmpty {
+            Menu("Tag: \(item.tags)") {
+                ForEach(viewModel.availableTags, id: \.self) { tag in
+                    Button(tag) { viewModel.updateTags(tag, for: item) }
+                }
+                Button("Xoá tag", role: .destructive) { viewModel.updateTags("", for: item) }
+            }
+        }
         Divider()
         Button("Xoá", role: .destructive) { viewModel.delete(item) }
     }

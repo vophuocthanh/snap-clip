@@ -16,6 +16,14 @@ let package = Package(
             linkerSettings: [
                 .linkedLibrary("sqlite3")
             ]
+        ),
+        .testTarget(
+            name: "CopyClipProTests",
+            dependencies: ["CopyClipPro"],
+            path: "Tests/CopyClipProTests",
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]
         )
     ]
 )

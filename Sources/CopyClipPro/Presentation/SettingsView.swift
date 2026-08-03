@@ -1,9 +1,9 @@
 import SwiftUI
+import AppKit
 
-/// Cửa sổ cài đặt (MVP): retention, quyền riêng tư, hành vi dán.
+/// Cửa sổ cài đặt.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
-    /// Cho biết trạng thái quyền Accessibility (để tự động dán).
     var accessibilityGranted: Bool
     var onRequestAccessibility: () -> Void
 
@@ -18,14 +18,61 @@ struct SettingsView: View {
                 )
             }
 
-            Section("Quyền riêng tư") {
-                Toggle("Bỏ qua nội dung ẩn (mật khẩu, OTP)", isOn: $settings.ignoreConcealed)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Ứng dụng bị bỏ qua (bundle id, cách nhau bằng dấu phẩy)")
+            Section("Bảo mật") {
+                Toggle("Phát hiện & bỏ qua mật khẩu/OTP", isOn: $settings.ignoreConcealed)
+                Toggle("Mã hoá nội dung nhạy cảm (AES-GCM)", isOn: $settings.encryptSensitiveContent)
+                    .help("Lưu key trong Keychain, mã hoá field content bằng CryptoKit")
+            }
+
+            Section("Ứng dụng bị bỏ qua") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Nhập bundle ID thủ công (cách nhau bằng phẩy):")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     TextField("com.apple.keychainaccess, …", text: $settings.ignoredBundleIdsRaw)
                         .textFieldStyle(.roundedBorder)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Hoặc chọn từ danh sách app đang chạy:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    let runningApps = NSWorkspace.shared.runningApplications
+                        .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil }
+                        .sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") }
+
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 6) {
+                            ForEach(runningApps, id: \.bundleIdentifier) { app in
+                                let bundleId = app.bundleIdentifier ?? ""
+                                let isSelected = settings.ignoredBundleIds.contains(bundleId)
+                                Button {
+                                    toggleAppIgnored(bundleId)
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        if let icon = app.icon {
+                                            Image(nsImage: icon)
+                                                .resizable()
+                                                .frame(width: 14, height: 14)
+                                        }
+                                        Text(app.localizedName ?? bundleId)
+                                            .font(.caption)
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(isSelected ? Color.red.opacity(0.15) : Color.secondary.opacity(0.08))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(isSelected ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .frame(height: 32)
                 }
             }
 
@@ -48,6 +95,16 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 380)
+        .frame(width: 460, height: 520)
+    }
+
+    private func toggleAppIgnored(_ bundleId: String) {
+        var ids = settings.ignoredBundleIds
+        if ids.contains(bundleId) {
+            ids.remove(bundleId)
+        } else {
+            ids.insert(bundleId)
+        }
+        settings.ignoredBundleIdsRaw = ids.sorted().joined(separator: ", ")
     }
 }

@@ -71,6 +71,7 @@ struct DetailView: View {
         case .image: return "Hình ảnh"
         case .file: return "Tập tin"
         case .richText: return "Văn bản định dạng"
+        case .snippet: return "Snippet"
         }
     }
 
@@ -93,6 +94,8 @@ struct DetailView: View {
                     fileContentView
                 case .richText:
                     richTextContentView
+                case .snippet:
+                    textContentView
                 }
             }
             .padding(16)

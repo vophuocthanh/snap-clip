@@ -10,11 +10,13 @@
 ```
 
 Sinh ra trong `dist/`:
+
 - `CopyClipPro.app` — universal binary (Apple Silicon **và** Intel).
 - `CopyClipPro.zip` — gọn, dễ gửi.
 - `CopyClipPro.dmg` — ảnh đĩa, kéo-thả cài đặt.
 
 ### Chạy trên máy Mac khác
+
 1. Copy `.dmg` (hoặc `.zip`) sang máy đó → mở → kéo `CopyClipPro.app` vào `/Applications`.
 2. App đang ký **ad-hoc** (chưa notarize) nên Gatekeeper chặn lần đầu. Gỡ chặn:
    ```bash
@@ -50,7 +52,72 @@ Sau đó đóng lại thành `.dmg`/`.zip` để phân phối — máy đích m�
   Security → Accessibility. Không cấp thì nội dung vẫn nằm trong clipboard để tự dán.
 - Global hotkey (Carbon) **không cần** quyền gì.
 
-## 4. Hướng phát triển tiếp cho release
+## 4. Sparkle Auto-Update
+
+### Cài đặt Sparkle
+
+Sparkle là framework auto-update phổ biến cho macOS. Cách cài qua SPM:
+
+1. Thêm dependency vào `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.7.0"),
+],
+targets: [
+    .executableTarget(
+        name: "CopyClipPro",
+        dependencies: ["Sparkle"],
+        ...
+    ),
+]
+```
+
+2. Trong `AppController`, khởi tạo `SPUStandardUpdaterController`:
+
+```swift
+import Sparkle
+
+lazy var updater = SPUStandardUpdaterController(
+    startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
+)
+```
+
+3. Tạo feed appcast XML (vd: `https://example.com/appcast.xml`):
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>CopyClipPro Changelog</title>
+    <item>
+      <title>Version 1.0.1</title>
+      <sparkle:version>1.0.1</sparkle:version>
+      <enclosure url="https://example.com/CopyClipPro-1.0.1.dmg"
+                 sparkle:edSignature="..."
+                 length="..."
+                 type="application/octet-stream" />
+    </item>
+  </channel>
+</rss>
+```
+
+4. Ký feed bằng private EdDSA key (tạo bằng `generate_keys` tool của Sparkle).
+
+### Chu trình phát hành có auto-update
+
+```bash
+# Build + codesign + notarize
+./scripts/package.sh release      # tạo dist/CopyClipPro.app
+./scripts/make-dist.sh             # tạo .dmg
+
+# Generate delta update + ký
+# (dùng sparkle tool: generate_appcast)
+
+# Upload .dmg + appcast.xml lên server
+```
+
+## 5. Hướng phát triển tiếp cho release
 
 - **Auto-update**: tích hợp Sparkle (feed appcast) — xem docs/ROADMAP.md, Sprint 6.
 - **CI**: dựng universal build + notarize tự động (GitHub Actions trên runner macOS).

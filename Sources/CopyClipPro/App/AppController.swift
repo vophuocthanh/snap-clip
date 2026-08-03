@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Carbon.HIToolbox
+import os
 
 // Main App
 
@@ -22,12 +23,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var settingsWindow: NSWindow?
     private var detailWindow: NSWindow?
     private var keyMonitor: Any?
-    /// Used to prevent accidental reopening of panel when clicking the status button.
     private var panelDismissedAt: Date?
 
+    private let log = Logger(subsystem: "com.copyclippro", category: "app")
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Regular mode: show icon in Dock (always visible) and help macOS allocate a stable menu bar slot
-        // when there are multiple screens.
+        log.info("App started")
         NSApp.setActivationPolicy(.regular)
 
         do {
@@ -360,7 +361,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             onRequestAccessibility: { Self.openAccessibilityPrefs() }
         )
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -396,10 +397,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Lifecycle
 
     @objc private func quit() {
+        log.info("App terminating")
         NSApp.terminate(nil)
     }
 
     private func presentFatal(_ message: String) {
+        log.error("Fatal error: \(message)")
         let alert = NSAlert()
         alert.messageText = "CopyClipPro"
         alert.informativeText = message
