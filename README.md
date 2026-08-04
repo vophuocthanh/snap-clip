@@ -1,131 +1,156 @@
 # SnapClip
 
-Trình quản lý lịch sử clipboard (Clipboard History) **native cho macOS**, viết bằng **Swift + SwiftUI + AppKit**, lưu trữ bằng **SQLite**. Zero-dependency — chỉ dùng API chính thức của Apple.
+Trình quản lý lịch sử clipboard **native cho macOS**, viết bằng **Swift + SwiftUI +
+AppKit**, lưu trữ bằng **SQLite**. Zero-dependency — chỉ dùng API chính thức của Apple.
 
-> Lấy cảm hứng từ CopyClip, Maccy và Raycast Clipboard History, nhưng có kiến trúc phân lớp riêng, dễ mở rộng và bảo trì. Mục tiêu: chất lượng phát hành thật (Production Ready).
+Mọi thứ bạn copy đều được ghi lại và gọi lại được bằng **⌘⌥V**. Dữ liệu nằm trọn
+trên máy bạn: không tài khoản, không máy chủ, không một lệnh gọi mạng nào.
 
-## Tính năng (MVP hiện tại)
+> Lấy cảm hứng từ CopyClip, Maccy và Raycast Clipboard History, nhưng có kiến trúc
+> phân lớp riêng, dễ mở rộng và bảo trì. Mục tiêu: chất lượng phát hành thật.
 
-- 📋 **Clipboard History** — tự động ghi lại mọi nội dung text được copy
-- 🔍 **Tìm kiếm tức thời** (debounce, LIKE + index)
-- 📌 **Ghim (Pin)** và ⭐ **Yêu thích (Favorite)** — được bảo vệ khỏi dọn dẹp
-- ⌨️ **Global hotkey ⌘⇧V** — mở nhanh từ bất cứ đâu (không cần quyền Accessibility)
-- ↕️ **Điều hướng bàn phím** — mũi tên lên/xuống, Enter để dán, Esc để đóng, ⌘⌫ để xoá
-- 📥 **Tự động dán** — chọn item → dán thẳng vào app đang mở (cần quyền Accessibility)
-- 🔒 **Riêng tư** — bỏ qua nội dung ẩn (mật khẩu/OTP) và danh sách app bị bỏ qua
-- 🗑️ **Retention** — tự giữ tối đa N mục mới nhất (mặc định 1000)
-- 🍔 Chạy trên **menu bar**, không chiếm Dock (`LSUIElement`)
+## Tính năng
+
+**Ghi và tìm lại**
+
+- 📋 Tự động ghi lại mọi nội dung được copy, kèm ứng dụng nguồn và thời điểm
+- 🔍 Tìm kiếm tức thì — debounce 120ms, truy vấn LIKE trên chỉ mục SQLite
+- 🧬 Chống trùng lặp theo hash nội dung (FNV-1a)
+- 🗑️ Retention tự động — giữ N mục mới nhất, mặc định 1.000, chỉnh được 50–100.000
+
+**Bảy loại nội dung**
+
+Văn bản · Liên kết · Mã màu (hex, rgb/rgba, tên màu CSS) · Hình ảnh (PNG kèm
+thumbnail) · Tệp tin (security-scoped bookmark) · Rich text (giữ nguyên RTF) ·
+Snippet do bạn tự tạo. Mỗi loại có biểu tượng và bản xem trước riêng, kèm màn hình
+chi tiết cho nội dung dài.
+
+**Tổ chức**
+
+- 📌 Ghim và ⭐ yêu thích — được bảo vệ khỏi cơ chế dọn dẹp tự động
+- 🏷️ Gắn thẻ (tag) và lọc theo thẻ, theo mục yêu thích hoặc theo snippet
+
+**Thao tác**
+
+- ⌨️ Phím tắt toàn cục **⌘⌥V**, đăng ký qua Carbon Event Manager nên không cần
+  quyền Accessibility. Nếu tổ hợp bị ứng dụng khác chiếm, app tự lùi sang
+  ⌃⌥⌘V → ⌃⌥V → ⌘⌥C
+- ↕️ Điều hướng hoàn toàn bằng bàn phím
+- 📥 Tự động dán — chọn item rồi Enter là nội dung vào thẳng cửa sổ đang gõ
+
+**Riêng tư**
+
+- 🔒 Tôn trọng cờ `concealed`/`transient` của macOS, đồng thời tự nhận diện mã OTP
+  6 số, số thẻ, token dài và các dòng chứa `password`, `secret`, `token`…
+- 🚫 Danh sách ứng dụng loại trừ, chọn trực quan từ các app đang chạy
+  (Keychain Access nằm sẵn trong mặc định)
+- 🔐 Mã hoá nội dung tuỳ chọn bằng AES-GCM 256-bit (CryptoKit), khoá sinh và giữ
+  trong Keychain, chỉ đọc được khi máy đã mở khoá
 
 ## Yêu cầu
 
-- macOS 14+ (Sonoma trở lên)
-- Xcode 16+ / Swift 6.0+ (đã kiểm thử với Swift 6.2, Xcode 26)
+- macOS 14 Sonoma trở lên
+- Swift 6.0+ / Xcode 16+ để build (đã kiểm thử với Swift 6.2)
 
-## Quick Start
+## Build & chạy
 
-### 🏃 Chạy nhanh (phát triển)
+### Cách 1 — Đóng gói `.app` (chuẩn, khuyến nghị)
+
+Đây là cách chạy đúng như một app thật, có icon trên thanh menu và đọc được
+`Info.plist`.
 
 ```bash
-swift run
+./scripts/package.sh release    # build release + đóng gói dist/SnapClip.app
+open dist/SnapClip.app          # icon 📋 xuất hiện trên thanh menu
 ```
 
-App sẽ chạy và hiển thị icon 📋 trên menu bar. Bấm icon hoặc hotkey **⌘⌥V** để mở.
+Sau khi mở, bấm icon 📋 trên thanh menu hoặc nhấn **⌘⌥V**.
 
-### 📦 Build release + mở app
+Script [scripts/package.sh](scripts/package.sh) tự làm: `swift build -c release` →
+dựng `dist/SnapClip.app` kèm `Info.plist` → ký ad-hoc để chạy cục bộ. Truyền
+`debug` thay cho `release` để đóng gói bản debug.
+
+### Cách 2 — Chạy nhanh khi phát triển
 
 ```bash
-swift build --configuration release
-open .build/release/SnapClip
+swift run                       # build + chạy ngay, vòng lặp sửa–thử nhanh nhất
+swift build                     # bản debug, chỉ biên dịch
+swift build -c release          # bản release, ra .build/release/SnapClip
 ```
 
-### 🛠 Mở bằng Xcode
+> ⚠️ `swift run` chạy như tiến trình thường, **không có bundle** nên thiếu
+> `Info.plist` — tiện để thử logic, nhưng muốn trải nghiệm đầy đủ thì dùng Cách 1.
+> Đừng gọi thẳng binary trong `.build/` để dùng hằng ngày.
+
+### Build lại và cài đè
 
 ```bash
-open Package.swift
-```
-
-Chọn scheme `SnapClip` → nhấn **⌘R**.
-
-### 📱 Đóng gói `.app` hoàn chỉnh (khuyến nghị)
-
-```bash
+pkill -x SnapClip
 ./scripts/package.sh release
 open dist/SnapClip.app
 ```
 
-> ⚠️ Menu bar app cần bundle `Info.plist` (khoá `LSUIElement`) để hoạt động đúng — ưu tiên chạy qua `.app` hoặc `swift run`.
-
-## Build & chạy (chi tiết)
-
-### Cách 1 — Đóng gói `.app` rồi mở (khuyến nghị)
-
-Đây là cách chạy đúng như một menu bar app thật (có icon trên thanh menu, ẩn khỏi Dock).
+### Mở bằng Xcode
 
 ```bash
-# Build bản release + đóng gói thành dist/SnapClip.app
-./scripts/package.sh release
-
-# Mở app (icon 📋 sẽ xuất hiện trên thanh menu)
-open dist/SnapClip.app
+open Package.swift              # Xcode mở SwiftPM package → chọn scheme SnapClip → ⌘R
 ```
 
-> ⚠️ **Phải chạy qua `.app`**, không chạy binary trần. Menu bar app cần `Info.plist`
-> (khoá `LSUIElement`) trong bundle thì status item mới hoạt động đúng.
+## Phím tắt
 
-Script [scripts/package.sh](scripts/package.sh) sẽ tự: `swift build -c release` → tạo
-`dist/SnapClip.app` với `Info.plist` → ký ad-hoc để chạy cục bộ. Truyền `debug`
-thay cho `release` để đóng gói bản debug: `./scripts/package.sh debug`.
+| Phím | Tác dụng               |
+| ---- | ---------------------- |
+| ⌘⌥V  | Mở / đóng bảng lịch sử |
+| ↑ ↓  | Di chuyển giữa các mục |
+| ⏎    | Dán mục đang chọn      |
+| ⎋    | Đóng bảng lịch sử      |
+| ⌘⌫   | Xoá mục đang chọn      |
 
-### Cách 2 — Build thủ công bằng SwiftPM
+## Quyền hệ thống
 
-```bash
-swift build -c release                 # biên dịch, ra .build/release/SnapClip
-swift build                            # bản debug (mặc định)
-swift run                              # build + chạy nhanh khi phát triển
-```
+| Quyền         | Khi nào cần                                                         |
+| ------------- | ------------------------------------------------------------------- |
+| Không cần gì  | Ghi lịch sử, tìm kiếm, phím tắt toàn cục                            |
+| Accessibility | Chỉ khi bật **tự động dán** — macOS bắt buộc để mô phỏng thao tác ⌘V |
 
-`swift run` tiện để thử logic nhưng chạy như tiến trình thường (không có bundle) —
-với menu bar app nên ưu tiên **Cách 1** để trải nghiệm đầy đủ.
+Cấp quyền tại Cài đặt → Dán → Cấp quyền, hoặc System Settings → Privacy &
+Security → Accessibility.
 
-### Build lại & cài đè (workflow thường dùng)
+## Dữ liệu lưu ở đâu
 
-```bash
-pkill -x SnapClip                    # tắt bản đang chạy (nếu có)
-./scripts/package.sh release            # build + đóng gói lại
-open dist/SnapClip.app               # mở bản mới
-```
+| Thứ               | Vị trí                                                  |
+| ----------------- | ------------------------------------------------------- |
+| Lịch sử clipboard | `~/Library/Application Support/SnapClip/history.sqlite`  |
+| Cấu hình          | `UserDefaults` (domain `vn.dipro.snapclip`)             |
+| Khoá mã hoá       | Keychain, tag `com.snapclip.encryptionKey`              |
 
-### Mở bằng Xcode (tuỳ chọn)
-
-```bash
-open Package.swift                      # Xcode mở SwiftPM package, bấm ⌘R để chạy
-```
-
----
-
-Sau khi mở, tìm icon 📋 trên thanh menu. Bấm để mở, hoặc nhấn **⌘⇧V**.
-
-> Để bật **tự động dán**, vào Cài đặt → Dán → Cấp quyền Accessibility (System Settings → Privacy & Security → Accessibility).
+Schema dùng `PRAGMA user_version` để migrate tăng dần (hiện ở version 4), có chỉ
+mục cho `created_at`, `content_hash`, cờ pin/favorite, `tags` và `is_snippet`.
+Gỡ app và xoá thư mục trên là dữ liệu biến mất hoàn toàn.
 
 ## Phân phối sang máy Mac khác
 
-> ⚠️ Đây là app **macOS native** — **không dùng Docker được** (Docker chạy Linux, không có AppKit/menu bar/clipboard của macOS). Máy đích phải là **macOS 14+**.
+> Đây là app macOS native — **không chạy được trong Docker** (Docker là Linux,
+> không có AppKit, menu bar hay pasteboard của macOS). Máy đích phải là macOS 14+.
 
 ```bash
-./scripts/make-dist.sh     # tạo universal .app + .zip + .dmg trong dist/
+./scripts/make-dist.sh          # universal .app + .zip + .dmg trong dist/
 ```
 
-Copy `dist/SnapClip.dmg` sang máy Mac khác → kéo vào `/Applications`. Lần đầu gỡ chặn Gatekeeper:
+Copy `dist/SnapClip.dmg` sang máy đích → kéo vào `/Applications`. Bản dựng hiện ký
+ad-hoc và chưa notarize nên lần đầu cần gỡ chặn Gatekeeper:
 
 ```bash
 xattr -cr "/Applications/SnapClip.app"
 ```
 
-Chi tiết ký/notarize để phát hành sạch: xem [docs/RELEASE.md](docs/RELEASE.md).
+Quy trình ký Developer ID + notarize để phát hành sạch: xem [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Kiến trúc
 
-Dự án theo **Clean Architecture phân lớp + MVVM**. Xem chi tiết tại [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+**Clean Architecture phân lớp + MVVM**. Phụ thuộc luôn hướng vào trong: UI và
+ViewModel chỉ biết protocol `ClipboardRepository`, không hề biết SQLite — nhờ vậy
+dễ test và dễ thay backend lưu trữ.
 
 ```
 App (Composition Root)
@@ -135,26 +160,53 @@ App (Composition Root)
                  └─ Infrastructure (SQLite, Pasteboard, Hotkey)
 ```
 
-Nguyên tắc: **phụ thuộc luôn hướng vào trong**. UI và ViewModel chỉ biết `ClipboardRepository` (protocol) — không hề biết SQLite, nên dễ test và dễ thay backend.
-
-## Cấu trúc thư mục
-
 ```
 Sources/SnapClip/
-├── App/                  # main.swift, AppController (wiring, status item, popover)
-├── Presentation/         # HistoryView, HistoryRow, SettingsView
+├── App/                  # main.swift, AppController, FloatingPanel
+├── Presentation/         # HistoryView, HistoryRow, DetailView, SettingsView
 ├── Application/          # HistoryViewModel, AppSettings
 ├── Domain/               # ClipboardItem, ClipboardRepository (protocol)
 └── Infrastructure/
     ├── Persistence/      # SQLiteDatabase, SQLiteClipboardRepository
-    ├── Clipboard/        # ClipboardMonitor, PasteService
+    ├── Clipboard/        # ClipboardMonitor, PasteService, Image/File/RichText utils
     └── Hotkey/           # GlobalHotkey (Carbon)
 ```
 
+Chi tiết đầy đủ và lý do chọn từng pattern: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Kiểm thử
+
+```bash
+swift test
+```
+
+8 test trên Swift Testing, phủ entity, hash, preview và query mặc định. Cách viết
+test và kịch bản kiểm thử tay: [docs/TESTING.md](docs/TESTING.md).
+
+## Hiệu năng mục tiêu
+
+| Chỉ số                        | Mục tiêu |
+| ----------------------------- | -------- |
+| Mở bảng lịch sử               | < 100 ms |
+| Tìm kiếm trên 100.000 bản ghi | < 50 ms  |
+| RAM khi lưu 100.000 bản ghi   | < 150 MB |
+| CPU khi rảnh                  | ~ 0%     |
+| Thời gian khởi động           | < 300 ms |
+
+## Tài liệu
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — kiến trúc, pattern và lý do chọn
+- [docs/TESTING.md](docs/TESTING.md) — chiến lược kiểm thử
+- [docs/RELEASE.md](docs/RELEASE.md) — ký, notarize và phát hành
+- [docs/ROADMAP.md](docs/ROADMAP.md) — lộ trình theo sprint
+- [../landing-page](../landing-page) — trang giới thiệu và tải về (Next.js)
+
 ## Lộ trình
 
-Xem [docs/ROADMAP.md](docs/ROADMAP.md). Tiếp theo: Image/File preview, Snippets, launch-at-login, Sparkle auto-update, notarization.
+Sprint 1–6 đã hoàn thành. Tiếp theo: launch-at-login (SMAppService), iCloud Sync,
+plugin system, AI search. Chi tiết: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Giấy phép
 
-Nội bộ / chưa phát hành.
+[MIT](LICENSE) © 2026 SnapClip. Được tự do dùng, sửa và phân phối, miễn giữ lại
+thông báo bản quyền và giấy phép.

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "SnapClip - macOS Clipboard Manager",
+  "license": "MIT",
   "scripts": {
     "prepare": "husky"
   },
