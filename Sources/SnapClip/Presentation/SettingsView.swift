@@ -80,7 +80,9 @@ struct SettingsView: View {
                 Toggle("Tự động dán sau khi chọn (Cmd+V)", isOn: $settings.pasteOnSelect)
                 if settings.pasteOnSelect {
                     HStack {
-                        Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        Image(systemName: accessibilityGranted
+                              ? "checkmark.circle.fill"
+                              : "exclamationmark.triangle.fill")
                             .foregroundStyle(accessibilityGranted ? .green : .orange)
                         Text(accessibilityGranted
                              ? "Đã cấp quyền Accessibility"

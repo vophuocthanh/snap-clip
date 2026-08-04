@@ -112,10 +112,8 @@ final class ClipboardMonitor {
         // Dòng chứa "password", "passwd", "secret" + dấu hai chấm hoặc dấu bằng
         let lower = trimmed.lowercased()
         let sensitiveKeywords = ["password", "passwd", "secret", "api[_-]?key", "token", "auth"]
-        for kw in sensitiveKeywords {
-            if lower.range(of: kw, options: .regularExpression) != nil {
-                return true
-            }
+        for keyword in sensitiveKeywords where lower.range(of: keyword, options: .regularExpression) != nil {
+            return true
         }
 
         return false
@@ -156,10 +154,10 @@ final class ClipboardMonitor {
     private func readImageItem(sourceApp: NSRunningApplication?) -> ClipboardItem? {
         guard let image = readImage() else { return nil }
         guard let png = ImageUtils.pngData(from: image) else { return nil }
-        let (w, h) = ImageUtils.pixelSize(of: image)
+        let (width, height) = ImageUtils.pixelSize(of: image)
         let thumb = ImageUtils.thumbnailData(from: image)
         return ClipboardItem(
-            content: "Hình ảnh \(w)×\(h)",
+            content: "Hình ảnh \(width)×\(height)",
             contentHash: ClipboardItem.hash(for: png),
             type: .image,
             sourceAppBundleId: sourceApp?.bundleIdentifier,
@@ -236,20 +234,21 @@ final class ClipboardMonitor {
         return .text
     }
 
-    private static func isHexColor(_ s: String) -> Bool {
-        guard s.hasPrefix("#") else { return false }
-        let hex = s.dropFirst()
+    private static func isHexColor(_ text: String) -> Bool {
+        guard text.hasPrefix("#") else { return false }
+        let hex = text.dropFirst()
         guard hex.count == 6 || hex.count == 3 || hex.count == 8 else { return false }
         return hex.allSatisfy { $0.isHexDigit }
     }
 
     /// Phát hiện các định dạng màu CSS: rgb(r,g,b), rgba(r,g,b,a), tên màu cơ bản.
-    private static func isCSSColor(_ s: String) -> Bool {
-        let lower = s.lowercased()
+    private static func isCSSColor(_ text: String) -> Bool {
+        let lower = text.lowercased()
         // rgb() / rgba()
         if lower.hasPrefix("rgb") {
             let noSpace = lower.filter { !$0.isWhitespace }
-            return noSpace.range(of: #"^rgba?\(\d{1,3}(,\d{1,3}){2}(,\d+(\.\d+)?)?\)$"#, options: .regularExpression) != nil
+            let pattern = #"^rgba?\(\d{1,3}(,\d{1,3}){2}(,\d+(\.\d+)?)?\)$"#
+            return noSpace.range(of: pattern, options: .regularExpression) != nil
         }
         // Tên màu cơ bản
         let colorNames: Set<String> = [

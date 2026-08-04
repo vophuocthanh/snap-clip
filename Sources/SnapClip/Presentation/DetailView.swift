@@ -185,19 +185,19 @@ struct DetailView: View {
     }
 
     private var parsedColor: Color {
-        let s = item.content.trimmingCharacters(in: .whitespaces)
+        let trimmed = item.content.trimmingCharacters(in: .whitespaces)
         // Hex
-        if s.hasPrefix("#") {
-            let hex = s.dropFirst()
+        if trimmed.hasPrefix("#") {
+            let hex = trimmed.dropFirst()
             if let value = Int(hex, radix: 16) {
-                let r = Double((value >> 16) & 0xFF) / 255
-                let g = Double((value >> 8) & 0xFF) / 255
-                let b = Double(value & 0xFF) / 255
-                return Color(red: r, green: g, blue: b)
+                let red = Double((value >> 16) & 0xFF) / 255
+                let green = Double((value >> 8) & 0xFF) / 255
+                let blue = Double(value & 0xFF) / 255
+                return Color(red: red, green: green, blue: blue)
             }
         }
         // rgb()
-        let lower = s.lowercased().filter { !$0.isWhitespace }
+        let lower = trimmed.lowercased().filter { !$0.isWhitespace }
         if lower.hasPrefix("rgb") {
             let nums = lower
                 .replacingOccurrences(of: "rgba(", with: "")
@@ -233,9 +233,9 @@ struct DetailView: View {
     }
 
     private var hexString: String {
-        let s = item.content.trimmingCharacters(in: .whitespaces)
-        if s.hasPrefix("#") { return String(s.dropFirst()).uppercased() }
-        return s.uppercased()
+        let trimmed = item.content.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("#") { return String(trimmed.dropFirst()).uppercased() }
+        return trimmed.uppercased()
     }
 
     private var rgbString: String? {

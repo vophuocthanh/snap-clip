@@ -12,10 +12,10 @@ enum SQLiteError: Error, CustomStringConvertible {
 
     var description: String {
         switch self {
-        case .open(let m): return "SQLite open error: \(m)"
-        case .prepare(let m): return "SQLite prepare error: \(m)"
-        case .step(let m): return "SQLite step error: \(m)"
-        case .bind(let m): return "SQLite bind error: \(m)"
+        case .open(let message): return "SQLite open error: \(message)"
+        case .prepare(let message): return "SQLite prepare error: \(message)"
+        case .step(let message): return "SQLite step error: \(message)"
+        case .bind(let message): return "SQLite bind error: \(message)"
         }
     }
 }
@@ -145,14 +145,14 @@ extension OpaquePointer {
     }
 
     func columnText(_ index: Int32) -> String {
-        guard let c = sqlite3_column_text(self, index) else { return "" }
-        return String(cString: c)
+        guard let cString = sqlite3_column_text(self, index) else { return "" }
+        return String(cString: cString)
     }
 
     func columnTextOrNil(_ index: Int32) -> String? {
         guard sqlite3_column_type(self, index) != SQLITE_NULL,
-              let c = sqlite3_column_text(self, index) else { return nil }
-        return String(cString: c)
+              let cString = sqlite3_column_text(self, index) else { return nil }
+        return String(cString: cString)
     }
 
     func columnInt(_ index: Int32) -> Int {

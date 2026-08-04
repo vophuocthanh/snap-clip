@@ -176,9 +176,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let button = statusItem?.button,
            let win = button.window, win.screen == screen {
             // Nút status ở cùng màn hình active → thả panel ngay dưới nút.
-            let r = win.convertToScreen(button.convert(button.bounds, to: nil))
-            origin = NSPoint(x: r.midX - panelSize.width / 2,
-                             y: r.minY - panelGap - panelSize.height)
+            let buttonRect = win.convertToScreen(button.convert(button.bounds, to: nil))
+            origin = NSPoint(x: buttonRect.midX - panelSize.width / 2,
+                             y: buttonRect.minY - panelGap - panelSize.height)
         } else {
             // Nút ở màn hình khác → canh theo X của chuột, ngay dưới menu bar màn hình active.
             origin = NSPoint(x: mouse.x - panelSize.width / 2,
@@ -330,16 +330,16 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             ("⌃⌥V", controlKey | optionKey),
             ("⌘⌥C", cmdKey | optionKey) // (C) — chỉ dùng khi các combo V đều bận
         ]
-        for c in candidates {
-            let keyCode = c.label.hasSuffix("C") ? kVK_ANSI_C : kVK_ANSI_V
-            if let hk = GlobalHotkey(
+        for candidate in candidates {
+            let keyCode = candidate.label.hasSuffix("C") ? kVK_ANSI_C : kVK_ANSI_V
+            if let registered = GlobalHotkey(
                 keyCode: UInt32(keyCode),
-                modifiers: UInt32(c.mods),
+                modifiers: UInt32(candidate.mods),
                 handler: { [weak self] in self?.togglePopover() }
             ) {
-                hotkey = hk
-                currentHotkeyLabel = c.label
-                statusItem?.button?.toolTip = "SnapClip — lịch sử clipboard (\(c.label))"
+                hotkey = registered
+                currentHotkeyLabel = candidate.label
+                statusItem?.button?.toolTip = "SnapClip — lịch sử clipboard (\(candidate.label))"
                 return
             }
         }

@@ -182,7 +182,11 @@ final class SQLiteClipboardRepository: ClipboardRepository, @unchecked Sendable 
     }
 
     func fetch(_ query: HistoryQuery) throws -> [ClipboardItem] {
-        var sql = "SELECT id, content, content_hash, type, created_at, is_pinned, is_favorite, source_bundle_id, source_app_name, thumbnail_data, file_path, file_uti, is_snippet, tags FROM clipboard_items"
+        var sql = """
+            SELECT id, content, content_hash, type, created_at, is_pinned, is_favorite, \
+            source_bundle_id, source_app_name, thumbnail_data, file_path, file_uti, is_snippet, tags \
+            FROM clipboard_items
+            """
         var conditions: [String] = []
         if !query.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
             conditions.append("content LIKE ? ESCAPE '\\'")

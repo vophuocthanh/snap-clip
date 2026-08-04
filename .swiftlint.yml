@@ -1,0 +1,32 @@
+included:
+  - Sources
+
+excluded:
+  - .build
+  - dist
+  - node_modules
+  - Tests
+
+identifier_name:
+  # Mặc định của SwiftLint là 3 ký tự — quá gắt với các tên 2 ký tự đã thành
+  # quy ước trong Swift/AppKit (db, rc, vf, tv, fm...).
+  min_length:
+    warning: 2
+    error: 2
+  excluded:
+    - id
+    - SQLITE_TRANSIENT
+
+# Các view SwiftUI và repository khai báo nhiều thuộc tính nên tự nhiên dài hơn
+# ngưỡng mặc định 250/400. Nới vừa đủ, vẫn chặn khi file phình quá mức.
+type_body_length:
+  warning: 400
+  error: 500
+
+file_length:
+  warning: 500
+  error: 600
+
+# Độ phức tạp chủ yếu đến từ các switch ánh xạ tên màu — đếm case là sai lệch.
+cyclomatic_complexity:
+  ignores_case_statements: true
